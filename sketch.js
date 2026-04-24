@@ -172,14 +172,14 @@ function drawSprite(sprite, colors, x, y, w, h) {
 
 // ─── Init / layout ────────────────────────────────────────────────────────────
 function getUnit() {
-  return constrain(min(width, height) * 0.152, 61, 164);
+  return constrain(min(width, height) * 0.182, 73, 197);
 }
 
 function calcPhysics(unit) {
-  // jump height = unit × 1.6, time-to-peak = 23 frames on every screen size
+  // jump height = unit × 2.0, time-to-peak = 23 frames on every screen size
   return {
-    gravity:   unit * 3.2 / 529,
-    jumpForce: -(unit * 73.6 / 529),
+    gravity:   unit * 4.0 / 529,
+    jumpForce: -(unit * 92.0 / 529),
   };
 }
 
@@ -323,7 +323,7 @@ function spawnObstacle() {
     let sh  = MS.length;
     let w   = unit * 1.1;
     let h   = w * (sh / sw);          // preserves square pixels
-    let maxJ = unit * 1.6;            // jump height always = unit × 1.6
+    let maxJ = unit * 2.0;            // jump height always = unit × 2.0
     // Centre of sprite at 55% of jump arc — reachable but requires a jump
     let centreY = groundY - ch.h / 2 - maxJ * 0.55;
     obstacles.push({
@@ -456,21 +456,52 @@ function drawStart() {
   let sz = min(width, height);
   noStroke();
   fill(18, 18, 18, 195);
-  rect(width / 2 - sz * 0.42, height * 0.21, sz * 0.84, sz * 0.50, 14);
+  rect(width / 2 - sz * 0.42, height * 0.16, sz * 0.84, sz * 0.70, 14);
 
   textAlign(CENTER, CENTER);
   fill(255);
-  textSize(sz * 0.065);
-  text('SEARCH: The Game', width / 2, height * 0.31);
+  textSize(sz * 0.062);
+  text('SEARCH: The Game', width / 2, height * 0.24);
 
-  textSize(sz * 0.026);
-  fill(210, 210, 210);
-  text('Jump over franchise stores — avoid losing hearts.', width / 2, height * 0.42);
-  text('Collect local spots — gain a heart!',               width / 2, height * 0.49);
+  // Divider line
+  stroke(100, 100, 100);
+  strokeWeight(1);
+  line(width / 2 - sz * 0.35, height * 0.31, width / 2 + sz * 0.35, height * 0.31);
+  noStroke();
 
+  // Instruction rows
+  let iconSz  = sz * 0.095;
+  let iconX   = width / 2 - sz * 0.30;
+  let textX   = iconX + iconSz + sz * 0.025;
+  let row1Y   = height * 0.40;
+  let row2Y   = height * 0.52;
+
+  // Row 1: Franchise store (bad)
+  drawSprite(FS, FC, iconX, row1Y - iconSz / 2, iconSz, iconSz);
+  fill(255, 150, 150);
+  textAlign(LEFT, CENTER);
+  textSize(sz * 0.027);
+  text('Franchise Store', textX, row1Y - sz * 0.018);
+  fill(220, 100, 100);
+  textSize(sz * 0.023);
+  text('Jump over — lose a ♥', textX, row1Y + sz * 0.018);
+
+  // Row 2: Farmers market (good)
+  let mh = iconSz * (MS.length / MS[0].length);
+  drawSprite(MS, MC, iconX, row2Y - mh / 2, iconSz, mh);
+  fill(150, 255, 150);
+  textAlign(LEFT, CENTER);
+  textSize(sz * 0.027);
+  text('Local Spot', textX, row2Y - sz * 0.018);
+  fill(100, 200, 100);
+  textSize(sz * 0.023);
+  text('Collect — gain a ♥', textX, row2Y + sz * 0.018);
+
+  // Start prompt
+  textAlign(CENTER, CENTER);
   textSize(sz * 0.038);
   fill(255, 220, 48);
-  text('Tap or click to start', width / 2, height * 0.59);
+  text('Tap or click to start', width / 2, height * 0.70);
 }
 
 function drawGameOver() {
