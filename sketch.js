@@ -74,8 +74,9 @@ const CS = [
 ];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const GRAVITY       = 0.6;
-const JUMP_FORCE    = -14;
+// GRAVITY and JUMP_FORCE are derived per-unit in recalcLayout() so that
+// jump height = unit × 1.6 and time-to-peak = 23 frames on every screen size.
+// Formula: gravity = unit × 3.2/529,  jumpForce = -(unit × 73.6/529)
 const GROUND_RATIO  = 0.78;
 const TOTAL_DIST    = 6000;
 const BASE_SPEED    = 3;
@@ -96,6 +97,7 @@ let obstacles;
 let hearts, invulnTimer;
 let spawnTimer, nextSpawnIn;
 let clouds;
+let chGravity, chJumpForce;
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJump, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -170,7 +172,15 @@ function drawSprite(sprite, colors, x, y, w, h) {
 
 // ─── Init / layout ────────────────────────────────────────────────────────────
 function getUnit() {
-  return constrain(min(width, height) * 0.13, 52, 140);
+  return constrain(min(width, height) * 0.152, 61, 164);
+}
+
+function calcPhysics(unit) {
+  // jump height = unit × 1.6, time-to-peak = 23 frames on every screen size
+  return {
+    gravity:   unit * 3.2 / 529,
+    jumpForce: -(unit * 73.6 / 529),
+  };
 }
 
 function initGame() {
@@ -183,6 +193,7 @@ function initGame() {
     y: groundY - unit,
     vy: 0, onGround: true,
   };
+  ({ gravity: chGravity, jumpForce: chJumpForce } = calcPhysics(unit));
 
   scrollDist  = 0;
   scrollSpeed = BASE_SPEED;
@@ -213,12 +224,13 @@ function recalcLayout() {
   if (ch.onGround || gameState === 'START') {
     ch.y = groundY - unit;
   }
+  ({ gravity: chGravity, jumpForce: chJumpForce } = calcPhysics(unit));
 }
 
 // ─── Game update ──────────────────────────────────────────────────────────────
 function updateGame() {
   // Character physics
-  ch.vy += GRAVITY;
+  ch.vy += chGravity;
   ch.y  += ch.vy;
   if (ch.y >= groundY - ch.h) {
     ch.y = groundY - ch.h;
@@ -311,8 +323,8 @@ function spawnObstacle() {
     let sh  = MS.length;
     let w   = unit * 1.35;
     let h   = w * (sh / sw);          // preserves square pixels
-    let maxJ = (JUMP_FORCE * JUMP_FORCE) / (2 * GRAVITY); // ≈ 163 px
-    // Centre of sprite should be reachable: 55% of jump arc above ground level
+    let maxJ = unit * 1.6;            // jump height always = unit × 1.6
+    // Centre of sprite at 55% of jump arc — reachable but requires a jump
     let centreY = groundY - ch.h / 2 - maxJ * 0.55;
     obstacles.push({
       type: 'market',
@@ -504,7 +516,7 @@ function handleInput() {
     startMusic();
   } else if (gameState === 'PLAYING') {
     if (ch.onGround) {
-      ch.vy = JUMP_FORCE;
+      ch.vy = chJumpForce;
       ch.onGround = false;
       playSound(sndJump);
     }
