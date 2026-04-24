@@ -139,8 +139,8 @@ const CS = [
 // Formula: gravity = unit × 3.2/529,  jumpForce = -(unit × 73.6/529)
 const GROUND_RATIO  = 0.78;
 const TOTAL_DIST    = 6000;
-const BASE_SPEED    = 3;
-const MAX_SPEED     = 5.5;
+const BASE_SPEED    = 5;
+const MAX_SPEED     = 9;
 const INVULN_FRAMES = 90;
 
 
@@ -376,7 +376,7 @@ function spawnObstacle() {
   if (isBad) {
     let variant = random(['burger', 'shake']);
     let sp = variant === 'burger' ? BURGERS : SHAKES;
-    let w  = unit * 0.65;
+    let w  = unit * 0.55;
     let h  = w * (sp.length / sp[0].length);
     obstacles.push({ type: 'franchise', variant, x: width + unit, y: groundY - h, w, h });
   } else {
@@ -391,23 +391,44 @@ function spawnObstacle() {
 }
 
 function rectsOverlap(a, b) {
-  let m = a.w * 0.15; // forgiveness margin
+  let mx = a.w * 0.18;  // horizontal forgiveness
+  let mt = a.h * 0.14;  // extra top clearance so jumps feel clean
+  let mb = a.w * 0.18;  // bottom forgiveness
   return (
-    a.x + m     < b.x + b.w &&
-    a.x + a.w - m > b.x      &&
-    a.y + m     < b.y + b.h  &&
-    a.y + a.h - m > b.y
+    a.x + mx     < b.x + b.w &&
+    a.x + a.w - mx > b.x     &&
+    a.y + mt     < b.y + b.h &&
+    a.y + a.h - mb > b.y
   );
 }
 
 // ─── Drawing helpers ──────────────────────────────────────────────────────────
+// Pixelated sky palette — dark blue at top, pale horizon at bottom
+const SKY_BANDS = [
+  [32,  88, 172],
+  [44, 108, 190],
+  [58, 128, 205],
+  [72, 148, 216],
+  [88, 166, 224],
+  [108, 184, 230],
+  [130, 200, 236],
+  [155, 215, 242],
+];
+
 function drawSkyAndGround() {
-  // Two-tone sky
   noStroke();
-  fill(95, 175, 228);
-  rect(0, 0, width, groundY * 0.55);
-  fill(135, 206, 235);
-  rect(0, groundY * 0.55, width, groundY * 0.45);
+  // Pixelated gradient — equal-height bands
+  let bands  = SKY_BANDS.length;
+  let bandPx = max(1, floor(groundY / bands));
+  for (let b = 0; b < bands; b++) {
+    let sc = SKY_BANDS[b];
+    fill(sc[0], sc[1], sc[2]);
+    rect(0, b * bandPx, width, bandPx + 1);
+  }
+  // Cover any gap between last band and ground
+  let lastSc = SKY_BANDS[bands - 1];
+  fill(lastSc[0], lastSc[1], lastSc[2]);
+  rect(0, bands * bandPx, width, groundY - bands * bandPx);
 
   // Clouds
   for (let c of clouds) {
@@ -422,6 +443,28 @@ function drawSkyAndGround() {
 
   // Scrolling grass tufts
   drawGrassTufts();
+}
+
+// 7×6 pixel-art heart
+const HEART_MAP = [
+  [0,1,1,0,1,1,0],
+  [1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1],
+  [0,1,1,1,1,1,0],
+  [0,0,1,1,1,0,0],
+  [0,0,0,1,0,0,0],
+];
+
+function drawPixelHeart(x, y, pxSize, filled) {
+  fill(filled ? color(240, 55, 55) : color(70, 70, 70));
+  noStroke();
+  for (let r = 0; r < HEART_MAP.length; r++) {
+    for (let c = 0; c < HEART_MAP[r].length; c++) {
+      if (HEART_MAP[r][c]) {
+        rect(floor(x + c * pxSize), floor(y + r * pxSize), pxSize, pxSize);
+      }
+    }
+  }
 }
 
 function drawGrassTufts() {
@@ -443,14 +486,12 @@ function drawGrassTufts() {
 }
 
 function drawHearts() {
-  let sz    = min(width, height);
-  let hSize = max(20, sz * 0.05);
-  textAlign(LEFT, TOP);
-  noStroke();
+  let sz     = min(width, height);
+  let pxSize = max(3, floor(sz * 0.009));
+  let hW     = 7 * pxSize;
+  let gap    = floor(pxSize * 2);
   for (let i = 0; i < 3; i++) {
-    fill(i < hearts ? color(240, 55, 55) : color(65, 65, 65));
-    textSize(hSize);
-    text('♥', 12 + i * (hSize + 4), 12);
+    drawPixelHeart(12 + i * (hW + gap), 14, pxSize, i < hearts);
   }
 }
 
