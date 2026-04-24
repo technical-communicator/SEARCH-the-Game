@@ -146,6 +146,7 @@ const INVULN_FRAMES = 90;
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let charImg;
+let titleImg;
 let gameState = 'INTRO';
 
 let ch;
@@ -186,6 +187,7 @@ function stopMusic() {
 // ─── p5 lifecycle ─────────────────────────────────────────────────────────────
 function preload() {
   charImg    = loadImage('search.png');
+  titleImg   = loadImage('title.png');
   sndMusic    = loadSound('music.mp3');
   sndJump     = loadSound('jump.mp3');
   sndHurt     = loadSound('hurt.mp3');
@@ -520,16 +522,19 @@ function drawIntro() {
   let charY  = height * 0.12 + floatY;
   image(charImg, charX, charY, charSz, charSz);
 
-  // Title text
-  fill(255, 220, 48);
-  textAlign(CENTER, CENTER);
-  textSize(sz * 0.065);
-  noStroke();
-  text('SEARCH: The Game', width / 2, charY + charSz + sz * 0.08);
+  // Title image — floating below character
+  if (titleImg && titleImg.width > 0) {
+    let titleW = sz * 0.50;
+    let titleH = titleW * (titleImg.height / titleImg.width);
+    let titleX = width / 2 - titleW / 2;
+    let titleY = charY + charSz + sz * 0.06 + floatY * 0.5;
+    image(titleImg, titleX, titleY, titleW, titleH);
+  }
 
   // "Tap to continue" blinks after 80 frames
   if (frameCount > 80 && floor(frameCount / 38) % 2 === 0) {
     fill(255, 220, 48);
+    textAlign(CENTER, CENTER);
     textSize(sz * 0.033);
     text('Tap or click to continue', width / 2, height * 0.90);
   }
