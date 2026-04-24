@@ -204,7 +204,7 @@ function initGame() {
   nextSpawnIn = 80;
 
   clouds = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     clouds.push({
       x:   random(width  * 0.1, width  * 1.3),
       y:   random(height * 0.04, groundY * 0.38),
@@ -269,7 +269,7 @@ function updateGame() {
   if (spawnTimer >= nextSpawnIn) {
     spawnObstacle();
     spawnTimer  = 0;
-    nextSpawnIn = floor(random(70, 140));
+    nextSpawnIn = floor(random(100, 170)); // fewer obstacles = faster mobile
   }
 
   // Update & collide obstacles
@@ -308,7 +308,7 @@ function spawnObstacle() {
 
   if (isFranchise) {
     // Square pixel art (16×16 sprite), placed on ground
-    let w = unit * 1.35;
+    let w = unit * 1.1;
     let h = w; // 1:1 keeps pixels square
     obstacles.push({
       type: 'franchise',
@@ -321,7 +321,7 @@ function spawnObstacle() {
     // 16×13 sprite — place centre at ~55% of max jump height
     let sw  = MS[0].length;
     let sh  = MS.length;
-    let w   = unit * 1.35;
+    let w   = unit * 1.1;
     let h   = w * (sh / sw);          // preserves square pixels
     let maxJ = unit * 1.6;            // jump height always = unit × 1.6
     // Centre of sprite at 55% of jump arc — reachable but requires a jump
@@ -371,7 +371,7 @@ function drawSkyAndGround() {
 }
 
 function drawGrassTufts() {
-  let step   = 22;
+  let step   = 34; // larger spacing = fewer rects, better mobile perf
   let offset = scrollDist % step;
   noStroke();
   for (let gx = -offset; gx < width + step; gx += step) {
