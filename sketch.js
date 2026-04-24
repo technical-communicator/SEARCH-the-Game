@@ -1,62 +1,122 @@
 // ─── Pixel Art Sprite Data ────────────────────────────────────────────────────
 
-// Franchise building (fast food style) — 16 × 16
-const FC = [
+// McDonald's Burger (bad) — 16 × 12
+const BC = [
   null,
-  [255, 205,   0],  // 1  gold
-  [200, 148,   0],  // 2  dark gold (arch shadow)
-  [210,  42,  42],  // 3  red
-  [155,  20,  20],  // 4  dark red
-  [175, 215, 248],  // 5  window glass
-  [ 28,  28,  32],  // 6  shadow / ground line
-  [242, 242, 252],  // 7  white (door panel)
+  [215, 165,  85],  // 1  golden bun top
+  [158, 108,  40],  // 2  dark bun edge
+  [ 70, 155,  60],  // 3  lettuce
+  [215,  60,  45],  // 4  tomato
+  [100,  55,  20],  // 5  patty dark
+  [245, 195,  50],  // 6  cheese yellow
+  [238, 228, 198],  // 7  sesame seed
+  [200, 150,  80],  // 8  bottom bun
 ];
-const FS = [
-  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],  //  0  sign top
-  [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],  //  1
-  [0,0,1,2,2,0,0,0,0,0,0,2,2,1,0,0],  //  2  golden arches outline
-  [0,0,1,2,0,2,0,0,0,0,2,0,2,1,0,0],  //  3
-  [0,0,1,2,0,2,2,0,0,2,2,0,2,1,0,0],  //  4
-  [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],  //  5  sign bottom
-  [0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0],  //  6  building top
-  [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],  //  7
-  [3,3,5,5,5,3,3,3,3,3,5,5,5,3,3,3],  //  8  windows
-  [3,3,5,5,5,3,3,3,3,3,5,5,5,3,3,3],  //  9
-  [3,3,5,5,5,3,3,3,3,3,5,5,5,3,3,3],  // 10
-  [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],  // 11
-  [3,3,3,3,6,6,6,6,6,6,6,6,3,3,3,3],  // 12  door frame
-  [3,3,3,3,6,7,7,7,7,7,7,6,3,3,3,3],  // 13  door panel
-  [3,3,3,3,6,7,7,7,7,7,7,6,3,3,3,3],  // 14
-  [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],  // 15  ground shadow
+const BURGERS = [
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],  //  0  top bun arch
+  [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],  //  1
+  [1,1,7,1,1,7,1,1,7,1,1,7,1,1,1,1],  //  2  sesame seeds
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],  //  3  bun bottom edge
+  [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],  //  4  lettuce
+  [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],  //  5  tomato
+  [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],  //  6  patty
+  [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],  //  7
+  [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],  //  8  cheese
+  [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],  //  9  bottom bun
+  [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],  // 10
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],  // 11  base edge
 ];
 
-// Farmers market stall — 16 × 13
-const MC = [
+// Chick-fil-A Milkshake (bad) — 12 × 16
+const SHKC = [
   null,
-  [ 45, 150,  55],  // 1  dark green
-  [100, 205,  75],  // 2  light green
-  [252, 252, 252],  // 3  white stripe
-  [145,  90,  48],  // 4  brown (frame / legs)
-  [187, 135,  80],  // 5  light brown (table top)
-  [255, 138,   0],  // 6  orange  (carrot / pumpkin)
-  [218,  58,  38],  // 7  red     (tomato / apple)
-  [240, 220,  38],  // 8  yellow  (lemon / corn)
-  [ 90, 185,  75],  // 9  produce green (lettuce)
+  [255, 255, 255],  // 1  dome lid white
+  [210, 210, 210],  // 2  dome shadow
+  [215,  40,  40],  // 3  CFA red cup
+  [155,  18,  18],  // 4  dark red cup
+  [252, 232, 215],  // 5  milkshake cream
+  [255, 160, 160],  // 6  straw light red
+  [195,  30,  30],  // 7  straw dark red stripe
+  [246, 215, 195],  // 8  shake highlight
 ];
-const MS = [
-  [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],  //  0  canopy top
-  [1,2,3,2,3,2,3,2,3,2,3,2,3,2,3,1],  //  1  stripe
-  [1,3,2,3,2,3,2,3,2,3,2,3,2,3,2,1],  //  2
-  [1,2,3,2,3,2,3,2,3,2,3,2,3,2,3,1],  //  3
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],  //  4  canopy hem
-  [0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,0],  //  5  poles
-  [0,4,5,5,5,5,5,5,5,5,5,5,5,5,4,0],  //  6  table top
-  [0,4,7,6,8,9,7,6,8,9,7,6,8,9,4,0],  //  7  produce row A
-  [0,4,6,8,7,9,6,8,7,9,6,8,7,9,4,0],  //  8  produce row B
-  [0,4,5,5,5,5,5,5,5,5,5,5,5,5,4,0],  //  9  table bottom
-  [0,0,4,0,0,0,0,0,0,0,0,0,0,4,0,0],  // 10  legs
-  [0,0,4,0,0,0,0,0,0,0,0,0,0,4,0,0],  // 11
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],  // 12
+const SHAKES = [
+  [0,0,0,0,6,7,6,0,0,0,0,0],  //  0  straw top
+  [0,0,0,0,6,7,6,0,0,0,0,0],  //  1
+  [0,0,1,1,6,7,1,1,1,0,0,0],  //  2  dome lid
+  [0,1,1,2,6,7,2,1,1,1,0,0],  //  3
+  [1,1,1,1,1,1,1,1,1,1,1,0],  //  4
+  [0,1,1,1,1,1,1,1,1,1,0,0],  //  5  dome hem
+  [0,3,3,3,3,3,3,3,3,3,3,0],  //  6  cup top
+  [0,3,5,5,5,5,5,5,5,5,3,0],  //  7  shake visible
+  [0,3,5,8,5,5,8,5,5,5,3,0],  //  8
+  [0,3,3,3,3,3,3,3,3,3,3,0],  //  9  cup mid
+  [0,4,3,3,3,3,3,3,3,3,4,0],  // 10
+  [0,4,3,3,3,3,3,3,3,3,4,0],  // 11
+  [0,0,4,3,3,3,3,3,3,4,0,0],  // 12
+  [0,0,4,4,4,4,4,4,4,4,0,0],  // 13  cup bottom
+  [0,0,0,0,0,0,0,0,0,0,0,0],  // 14
+  [0,0,0,0,0,0,0,0,0,0,0,0],  // 15
+];
+
+// Boba Cup (good) — 12 × 16
+const BOBC = [
+  null,
+  [255, 185, 215],  // 1  pink cup
+  [195, 120, 160],  // 2  dark pink cup
+  [255, 255, 255],  // 3  dome lid white
+  [215, 215, 215],  // 4  dome shadow
+  [228, 195, 210],  // 5  taro milk tea
+  [ 30,  18,  12],  // 6  tapioca pearl dark
+  [ 68,  42,  26],  // 7  pearl lighter
+  [245, 215, 225],  // 8  tea highlight
+  [ 28,  22,  18],  // 9  straw dark
+];
+const BOBAS = [
+  [0,0,0,0,9,9,9,0,0,0,0,0],  //  0  straw
+  [0,0,0,0,9,9,9,0,0,0,0,0],  //  1
+  [0,0,3,3,9,9,3,3,3,0,0,0],  //  2  dome lid
+  [0,3,3,4,9,9,4,3,3,3,0,0],  //  3
+  [3,3,3,3,9,9,3,3,3,3,3,0],  //  4
+  [0,3,3,3,3,3,3,3,3,3,0,0],  //  5  dome hem
+  [0,1,1,1,1,1,1,1,1,1,1,0],  //  6  cup top
+  [0,1,5,5,5,5,5,5,5,5,1,0],  //  7  milk tea
+  [0,1,8,5,5,8,5,5,8,5,1,0],  //  8
+  [0,1,5,5,5,5,5,5,5,5,1,0],  //  9
+  [0,1,6,7,6,7,6,7,6,7,1,0],  // 10  pearls row A
+  [0,2,7,6,7,6,7,6,7,6,2,0],  // 11  pearls row B
+  [0,2,1,1,1,1,1,1,1,1,2,0],  // 12  cup body
+  [0,0,2,1,1,1,1,1,1,2,0,0],  // 13
+  [0,0,2,2,2,2,2,2,2,2,0,0],  // 14  cup bottom
+  [0,0,0,0,0,0,0,0,0,0,0,0],  // 15
+];
+
+// Coffee Cup (good) — 12 × 14
+const COFC = [
+  null,
+  [255, 255, 255],  // 1  white cup
+  [218, 218, 218],  // 2  gray rim / saucer
+  [ 78,  42,  12],  // 3  dark coffee
+  [138,  78,  28],  // 4  coffee medium
+  [195, 228, 248],  // 5  steam wisps
+  [248, 244, 238],  // 6  cup white body
+  [192, 148,  68],  // 7  handle warm tan
+  [198, 192, 188],  // 8  saucer gray
+];
+const COFFEES = [
+  [0,0,5,0,5,0,0,5,0,5,0,0],  //  0  steam
+  [0,5,0,5,0,5,5,0,5,0,0,0],  //  1  steam
+  [0,0,0,0,0,0,0,0,0,0,0,0],  //  2
+  [0,1,1,1,1,1,1,1,1,1,1,0],  //  3  cup rim
+  [0,2,3,3,3,3,3,3,3,3,2,0],  //  4  coffee surface dark
+  [0,1,4,3,4,4,3,4,4,3,1,0],  //  5  coffee highlights
+  [0,6,6,6,6,6,6,6,6,6,6,0],  //  6  cup body
+  [7,6,6,6,6,6,6,6,6,6,6,7],  //  7  handle row
+  [7,6,6,6,6,6,6,6,6,6,6,7],  //  8
+  [0,6,6,6,6,6,6,6,6,6,6,0],  //  9
+  [0,1,1,1,1,1,1,1,1,1,1,0],  // 10  bottom rim
+  [0,0,8,8,8,8,8,8,8,8,0,0],  // 11  saucer
+  [0,0,0,0,0,0,0,0,0,0,0,0],  // 12
+  [0,0,0,0,0,0,0,0,0,0,0,0],  // 13
 ];
 
 // Cloud — 10 × 5
@@ -83,12 +143,10 @@ const BASE_SPEED    = 3;
 const MAX_SPEED     = 5.5;
 const INVULN_FRAMES = 90;
 
-const FRANCHISES = ["McDonald's", "Starbucks", "Subway", "Walmart", "Amazon Go"];
-const GOOD_ITEMS  = ["Farmers Market", "Community Garden", "Co-op Grocery", "Local Bakery"];
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let charImg;
-let gameState = 'START';
+let gameState = 'INTRO';
 
 let ch;
 let groundY;
@@ -98,6 +156,12 @@ let hearts, invulnTimer;
 let spawnTimer, nextSpawnIn;
 let clouds;
 let chGravity, chJumpForce;
+
+// Typewriter / rules reveal state
+const RULES_TITLE = 'HOW TO PLAY';
+let rwCharIdx = 0;   // chars of title revealed
+let rwPhase   = 0;   // how many instruction rows are visible (0-5)
+let rwTimer   = 0;   // frame counter used for pacing
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJump, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -139,7 +203,8 @@ function setup() {
 
 function draw() {
   switch (gameState) {
-    case 'START':    drawStart();              break;
+    case 'INTRO':    drawIntro();              break;
+    case 'RULES':    drawRules();              break;
     case 'PLAYING':  updateGame(); drawGame(); break;
     case 'GAMEOVER': drawGameOver();           break;
     case 'WIN':      drawWin();                break;
@@ -304,35 +369,22 @@ function updateGame() {
 
 function spawnObstacle() {
   let unit = ch.w;
-  let isFranchise = random() < 0.6;
+  let isBad = random() < 0.6;
 
-  if (isFranchise) {
-    // Square pixel art (16×16 sprite), placed on ground
-    let w = unit * 1.1;
-    let h = w; // 1:1 keeps pixels square
-    obstacles.push({
-      type: 'franchise',
-      x: width + unit,
-      y: groundY - h,
-      w, h,
-      label: random(FRANCHISES),
-    });
+  if (isBad) {
+    let variant = random(['burger', 'shake']);
+    let sp = variant === 'burger' ? BURGERS : SHAKES;
+    let w  = unit * 1.1;
+    let h  = w * (sp.length / sp[0].length);
+    obstacles.push({ type: 'franchise', variant, x: width + unit, y: groundY - h, w, h });
   } else {
-    // 16×13 sprite — place centre at ~55% of max jump height
-    let sw  = MS[0].length;
-    let sh  = MS.length;
-    let w   = unit * 1.1;
-    let h   = w * (sh / sw);          // preserves square pixels
-    let maxJ = unit * 2.0;            // jump height always = unit × 2.0
-    // Centre of sprite at 55% of jump arc — reachable but requires a jump
+    let variant = random(['boba', 'coffee']);
+    let sp   = variant === 'boba' ? BOBAS : COFFEES;
+    let w    = unit * 1.1;
+    let h    = w * (sp.length / sp[0].length);
+    let maxJ = unit * 2.0;
     let centreY = groundY - ch.h / 2 - maxJ * 0.55;
-    obstacles.push({
-      type: 'market',
-      x: width + w,
-      y: centreY - h / 2,
-      w, h,
-      label: random(GOOD_ITEMS),
-    });
+    obstacles.push({ type: 'market', variant, x: width + w, y: centreY - h / 2, w, h });
   }
 }
 
@@ -426,10 +478,11 @@ function drawGame() {
   // Obstacles
   for (let o of obstacles) {
     if (o.type === 'franchise') {
-      drawSprite(FS, FC, o.x, o.y, o.w, o.h);
+      if (o.variant === 'burger') drawSprite(BURGERS, BC,   o.x, o.y, o.w, o.h);
+      else                        drawSprite(SHAKES,  SHKC, o.x, o.y, o.w, o.h);
     } else {
-      drawSprite(MS, MC, o.x, o.y, o.w, o.h);
-      // reward indicator above stall
+      if (o.variant === 'boba')   drawSprite(BOBAS,   BOBC, o.x, o.y, o.w, o.h);
+      else                        drawSprite(COFFEES, COFC, o.x, o.y, o.w, o.h);
       let sz = min(width, height);
       noStroke();
       fill(255, 220, 48);
@@ -448,60 +501,134 @@ function drawGame() {
   drawProgress();
 }
 
-// ─── Other screens ────────────────────────────────────────────────────────────
-function drawStart() {
-  drawSkyAndGround();
-  image(charImg, ch.x, ch.y, ch.w, ch.h);
+// ─── Intro / Rules screens ────────────────────────────────────────────────────
+
+// Ransom-note style SEARCH logo matching the brand image
+function drawSearchLogo(cx, cy, letterSz) {
+  let letters  = 'SEARCH';
+  let bgColors = [
+    [198, 222,  28],  // S  lime yellow
+    [ 38, 192, 218],  // E  cyan
+    [242, 128, 182],  // A  pink
+    [ 18,  32,  72],  // R  dark navy
+    [208,  42, 172],  // C  magenta
+    [188, 222,  22],  // H  yellow-green
+  ];
+  let gap    = letterSz * 0.06;
+  let totalW = letters.length * (letterSz + gap) - gap;
+  let startX = cx - totalW / 2;
+
+  noStroke();
+  for (let i = 0; i < letters.length; i++) {
+    let lx  = startX + i * (letterSz + gap);
+    let col = bgColors[i];
+    fill(col[0], col[1], col[2]);
+    rect(lx, cy, letterSz, letterSz * 1.12, letterSz * 0.1);
+    fill(i === 3 ? color(195, 215, 255) : color(22, 22, 22));
+    textAlign(CENTER, CENTER);
+    textStyle(BOLD);
+    textSize(letterSz * 0.72);
+    text(letters[i], lx + letterSz / 2, cy + letterSz * 0.56);
+    textStyle(NORMAL);
+  }
+}
+
+function drawIntro() {
+  // Sky gradient background
+  noStroke();
+  fill(95, 175, 228);
+  rect(0, 0, width, height * 0.75);
+  fill(78, 152, 72);
+  rect(0, height * 0.75, width, height * 0.25);
+
+  let sz     = min(width, height);
+  let floatY = sin(frameCount * 0.042) * sz * 0.016; // gentle bob
+
+  // Character — large and centred
+  let charSz = sz * 0.42;
+  let charX  = width / 2 - charSz / 2;
+  let charY  = height * 0.08 + floatY;
+  image(charImg, charX, charY, charSz, charSz);
+
+  // Colorful SEARCH logo below character
+  let letterSz = sz * 0.098;
+  drawSearchLogo(width / 2, charY + charSz + sz * 0.028, letterSz);
+
+  // "Tap to continue" blinks after 80 frames
+  if (frameCount > 80 && floor(frameCount / 38) % 2 === 0) {
+    fill(255, 220, 48);
+    noStroke();
+    textAlign(CENTER, CENTER);
+    textSize(sz * 0.033);
+    text('Tap or click to continue', width / 2, height * 0.90);
+  }
+}
+
+function drawRules() {
+  // Background
+  noStroke();
+  fill(12, 12, 20);
+  rect(0, 0, width, height);
 
   let sz = min(width, height);
-  noStroke();
-  fill(18, 18, 18, 195);
-  rect(width / 2 - sz * 0.42, height * 0.16, sz * 0.84, sz * 0.70, 14);
 
-  textAlign(CENTER, CENTER);
-  fill(255);
-  textSize(sz * 0.062);
-  text('SEARCH: The Game', width / 2, height * 0.24);
-
-  // Divider line
-  stroke(100, 100, 100);
-  strokeWeight(1);
-  line(width / 2 - sz * 0.35, height * 0.31, width / 2 + sz * 0.35, height * 0.31);
-  noStroke();
-
-  // Instruction rows
-  let iconSz  = sz * 0.095;
-  let iconX   = width / 2 - sz * 0.30;
-  let textX   = iconX + iconSz + sz * 0.025;
-  let row1Y   = height * 0.40;
-  let row2Y   = height * 0.52;
-
-  // Row 1: Franchise store (bad)
-  drawSprite(FS, FC, iconX, row1Y - iconSz / 2, iconSz, iconSz);
-  fill(255, 150, 150);
-  textAlign(LEFT, CENTER);
-  textSize(sz * 0.027);
-  text('Franchise Store', textX, row1Y - sz * 0.018);
-  fill(220, 100, 100);
-  textSize(sz * 0.023);
-  text('Jump over — lose a ♥', textX, row1Y + sz * 0.018);
-
-  // Row 2: Farmers market (good)
-  let mh = iconSz * (MS.length / MS[0].length);
-  drawSprite(MS, MC, iconX, row2Y - mh / 2, iconSz, mh);
-  fill(150, 255, 150);
-  textAlign(LEFT, CENTER);
-  textSize(sz * 0.027);
-  text('Local Spot', textX, row2Y - sz * 0.018);
-  fill(100, 200, 100);
-  textSize(sz * 0.023);
-  text('Collect — gain a ♥', textX, row2Y + sz * 0.018);
-
-  // Start prompt
-  textAlign(CENTER, CENTER);
-  textSize(sz * 0.038);
+  // Title typewriter
+  let visTitle = RULES_TITLE.slice(0, rwCharIdx);
+  let cursor   = (rwCharIdx < RULES_TITLE.length && frameCount % 22 < 11) ? '|' : '';
   fill(255, 220, 48);
-  text('Tap or click to start', width / 2, height * 0.70);
+  textAlign(CENTER, CENTER);
+  textSize(sz * 0.058);
+  noStroke();
+  text(visTitle + cursor, width / 2, height * 0.13);
+
+  // Divider
+  stroke(80, 80, 80);
+  strokeWeight(1);
+  line(width / 2 - sz * 0.38, height * 0.20, width / 2 + sz * 0.38, height * 0.20);
+  noStroke();
+
+  // Instruction rows — each revealed after rwPhase advances
+  let iconSz = sz * 0.10;
+  let iconX  = width / 2 - sz * 0.34;
+  let textX  = iconX + iconSz + sz * 0.025;
+  let rows = [
+    { y: 0.31, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
+    { y: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
+    { y: 0.61, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
+    { y: 0.76, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
+  ];
+
+  for (let i = 0; i < rows.length; i++) {
+    if (rwPhase < i + 1) break;
+    let r  = rows[i];
+    let iy = height * r.y;
+    let ih = iconSz * (r.sp.length / r.sp[0].length);
+    drawSprite(r.sp, r.sc, iconX, iy - ih / 2, iconSz, ih);
+
+    fill(r.bad ? color(255, 155, 155) : color(155, 255, 155));
+    textAlign(LEFT, CENTER);
+    textSize(sz * 0.027);
+    text(r.name, textX, iy - sz * 0.017);
+    fill(r.bad ? color(218, 88, 88) : color(88, 200, 88));
+    textSize(sz * 0.023);
+    text(r.hint, textX, iy + sz * 0.017);
+  }
+
+  // "Tap to play" blinks once all rows shown
+  if (rwPhase >= 5 && floor(frameCount / 38) % 2 === 0) {
+    fill(255, 220, 48);
+    textAlign(CENTER, CENTER);
+    textSize(sz * 0.038);
+    text('Tap to play!', width / 2, height * 0.93);
+  }
+
+  // Advance typewriter / row reveals each frame
+  rwTimer++;
+  if (rwCharIdx < RULES_TITLE.length) {
+    if (rwTimer % 5 === 0) rwCharIdx++;
+  } else if (rwPhase < 5) {
+    if (rwTimer % 42 === 0) rwPhase++;
+  }
 }
 
 function drawGameOver() {
@@ -542,9 +669,21 @@ function mousePressed()  { handleInput(); }
 function touchStarted()  { handleInput(); return false; }
 
 function handleInput() {
-  if (gameState === 'START') {
-    gameState = 'PLAYING';
-    startMusic();
+  if (gameState === 'INTRO') {
+    // Move to rules screen, reset typewriter
+    gameState = 'RULES';
+    rwCharIdx = 0; rwPhase = 0; rwTimer = 0;
+  } else if (gameState === 'RULES') {
+    if (rwPhase >= 5) {
+      // All content shown — start game
+      initGame();
+      gameState = 'PLAYING';
+      startMusic();
+    } else {
+      // Fast-forward remaining text on early tap
+      rwCharIdx = RULES_TITLE.length;
+      rwPhase   = 5;
+    }
   } else if (gameState === 'PLAYING') {
     if (ch.onGround) {
       ch.vy = chJumpForce;
@@ -552,6 +691,7 @@ function handleInput() {
       playSound(sndJump);
     }
   } else {
+    // WIN or GAMEOVER — restart directly into game
     stopMusic();
     initGame();
     gameState = 'PLAYING';
