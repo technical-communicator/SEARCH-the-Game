@@ -516,18 +516,12 @@ function drawIntro() {
   let sz     = min(width, height);
   let floatY = sin(frameCount * 0.042) * sz * 0.016; // gentle bob
 
-  // Character — large and centred, floating
-  let charSz = sz * 0.48;
-  let charX  = width / 2 - charSz / 2;
-  let charY  = height * 0.12 + floatY;
-  image(charImg, charX, charY, charSz, charSz);
-
-  // Title image — floating below character
+  // Title image — floating centred
   if (titleImg && titleImg.width > 0) {
-    let titleW = sz * 0.50;
+    let titleW = sz * 0.55;
     let titleH = titleW * (titleImg.height / titleImg.width);
     let titleX = width / 2 - titleW / 2;
-    let titleY = charY + charSz + sz * 0.06 + floatY * 0.5;
+    let titleY = height / 2 - titleH / 2 + floatY;
     image(titleImg, titleX, titleY, titleW, titleH);
   }
 
