@@ -374,13 +374,13 @@ function spawnObstacle() {
   if (isBad) {
     let variant = random(['burger', 'shake']);
     let sp = variant === 'burger' ? BURGERS : SHAKES;
-    let w  = unit * 1.1;
+    let w  = unit * 0.65;
     let h  = w * (sp.length / sp[0].length);
     obstacles.push({ type: 'franchise', variant, x: width + unit, y: groundY - h, w, h });
   } else {
     let variant = random(['boba', 'coffee']);
     let sp   = variant === 'boba' ? BOBAS : COFFEES;
-    let w    = unit * 1.1;
+    let w    = unit * 0.65;
     let h    = w * (sp.length / sp[0].length);
     let maxJ = unit * 2.0;
     let centreY = groundY - ch.h / 2 - maxJ * 0.55;
@@ -503,36 +503,6 @@ function drawGame() {
 
 // ─── Intro / Rules screens ────────────────────────────────────────────────────
 
-// Ransom-note style SEARCH logo matching the brand image
-function drawSearchLogo(cx, cy, letterSz) {
-  let letters  = 'SEARCH';
-  let bgColors = [
-    [198, 222,  28],  // S  lime yellow
-    [ 38, 192, 218],  // E  cyan
-    [242, 128, 182],  // A  pink
-    [ 18,  32,  72],  // R  dark navy
-    [208,  42, 172],  // C  magenta
-    [188, 222,  22],  // H  yellow-green
-  ];
-  let gap    = letterSz * 0.06;
-  let totalW = letters.length * (letterSz + gap) - gap;
-  let startX = cx - totalW / 2;
-
-  noStroke();
-  for (let i = 0; i < letters.length; i++) {
-    let lx  = startX + i * (letterSz + gap);
-    let col = bgColors[i];
-    fill(col[0], col[1], col[2]);
-    rect(lx, cy, letterSz, letterSz * 1.12, letterSz * 0.1);
-    fill(i === 3 ? color(195, 215, 255) : color(22, 22, 22));
-    textAlign(CENTER, CENTER);
-    textStyle(BOLD);
-    textSize(letterSz * 0.72);
-    text(letters[i], lx + letterSz / 2, cy + letterSz * 0.56);
-    textStyle(NORMAL);
-  }
-}
-
 function drawIntro() {
   // Sky gradient background
   noStroke();
@@ -544,21 +514,22 @@ function drawIntro() {
   let sz     = min(width, height);
   let floatY = sin(frameCount * 0.042) * sz * 0.016; // gentle bob
 
-  // Character — large and centred
-  let charSz = sz * 0.42;
+  // Character — large and centred, floating
+  let charSz = sz * 0.48;
   let charX  = width / 2 - charSz / 2;
-  let charY  = height * 0.08 + floatY;
+  let charY  = height * 0.12 + floatY;
   image(charImg, charX, charY, charSz, charSz);
 
-  // Colorful SEARCH logo below character
-  let letterSz = sz * 0.098;
-  drawSearchLogo(width / 2, charY + charSz + sz * 0.028, letterSz);
+  // Title text
+  fill(255, 220, 48);
+  textAlign(CENTER, CENTER);
+  textSize(sz * 0.065);
+  noStroke();
+  text('SEARCH: The Game', width / 2, charY + charSz + sz * 0.08);
 
   // "Tap to continue" blinks after 80 frames
   if (frameCount > 80 && floor(frameCount / 38) % 2 === 0) {
     fill(255, 220, 48);
-    noStroke();
-    textAlign(CENTER, CENTER);
     textSize(sz * 0.033);
     text('Tap or click to continue', width / 2, height * 0.90);
   }
