@@ -97,9 +97,35 @@ let hearts, invulnTimer;
 let spawnTimer, nextSpawnIn;
 let clouds;
 
+// ─── Audio ────────────────────────────────────────────────────────────────────
+let sndMusic, sndJump, sndHurt, sndCollect, sndWin, sndGameOver;
+
+function playSound(snd) {
+  if (!snd || !snd.isLoaded()) return;
+  if (snd.isPlaying()) snd.stop();
+  snd.play();
+}
+
+function startMusic() {
+  if (!sndMusic || !sndMusic.isLoaded() || sndMusic.isPlaying()) return;
+  sndMusic.setLoop(true);
+  sndMusic.setVolume(0.35);
+  sndMusic.play();
+}
+
+function stopMusic() {
+  if (sndMusic && sndMusic.isPlaying()) sndMusic.stop();
+}
+
 // ─── p5 lifecycle ─────────────────────────────────────────────────────────────
 function preload() {
-  charImg = loadImage('search.png');
+  charImg    = loadImage('search.png');
+  sndMusic    = loadSound('music.mp3');
+  sndJump     = loadSound('jump.mp3');
+  sndHurt     = loadSound('hurt.mp3');
+  sndCollect  = loadSound('collect.mp3');
+  sndWin      = loadSound('win.mp3');
+  sndGameOver = loadSound('gameover.mp3');
 }
 
 function setup() {
@@ -219,7 +245,12 @@ function updateGame() {
   );
   scrollDist += scrollSpeed;
 
-  if (scrollDist >= TOTAL_DIST) { gameState = 'WIN'; return; }
+  if (scrollDist >= TOTAL_DIST) {
+    gameState = 'WIN';
+    stopMusic();
+    playSound(sndWin);
+    return;
+  }
 
   // Spawn obstacles
   spawnTimer++;
@@ -239,9 +270,17 @@ function updateGame() {
       if (o.type === 'franchise') {
         hearts--;
         invulnTimer = INVULN_FRAMES;
-        if (hearts <= 0) { hearts = 0; gameState = 'GAMEOVER'; return; }
+        if (hearts <= 0) {
+          hearts = 0;
+          gameState = 'GAMEOVER';
+          stopMusic();
+          playSound(sndGameOver);
+          return;
+        }
+        playSound(sndHurt);
       } else {
         hearts = min(hearts + 1, 3);
+        playSound(sndCollect);
         obstacles.splice(i, 1);
         continue;
       }
@@ -462,10 +501,17 @@ function touchStarted()  { handleInput(); return false; }
 function handleInput() {
   if (gameState === 'START') {
     gameState = 'PLAYING';
+    startMusic();
   } else if (gameState === 'PLAYING') {
-    if (ch.onGround) { ch.vy = JUMP_FORCE; ch.onGround = false; }
+    if (ch.onGround) {
+      ch.vy = JUMP_FORCE;
+      ch.onGround = false;
+      playSound(sndJump);
+    }
   } else {
+    stopMusic();
     initGame();
     gameState = 'PLAYING';
+    startMusic();
   }
 }
