@@ -142,10 +142,16 @@ const INTRO_TAG = 'Local shops vs. franchise chains.';
 const RULES_TITLE = 'HOW TO PLAY';
 
 const LEGEND_ROWS = [
-  { key: 'burger', yFrac: 0.30, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
-  { key: 'shake',  yFrac: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
-  { key: 'boba',   yFrac: 0.62, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
-  { key: 'coffee', yFrac: 0.78, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
+  { key: 'burger', yFrac: 0.30, sp: BURGERS, sc: BC,   bad: true,  local: false, name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
+  { key: 'shake',  yFrac: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  local: false, name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
+  { key: 'boba',   yFrac: 0.62, sp: BOBAS,   sc: BOBC, bad: false, local: true,  name: "Starbaby Boba",      hint: "Collect — gain a ♥"   },
+  { key: 'coffee', yFrac: 0.78, sp: COFFEES, sc: COFC, bad: false, local: true,  name: "Diablicos Coffee",   hint: "Collect — gain a ♥"   },
+];
+
+const PARTNERS = [
+  { name: 'Starbaby Boba',    handle: '@starbabyboba',     url: 'https://www.instagram.com/starbabyboba/',     col: [255, 185, 215] },
+  { name: 'Diablicos Coffee', handle: '@diablicos.coffee', url: 'https://www.instagram.com/diablicos.coffee/', col: [255, 155, 75]  },
+  { name: 'SearchCentralFL',  handle: '@searchcentralfl',  url: 'https://www.instagram.com/searchcentralfl/',  col: [120, 195, 255] },
 ];
 
 const CLOUD_DEFS = [
@@ -183,10 +189,11 @@ let rwPhase     = 0;  // which row is currently being typed (0-3); 4 = all done
 let rwLineChars = 0;  // chars of current row revealed
 let rwTimer     = 0;
 
-let IS_MOBILE  = false;
-let shakeTimer = 0;
-let particles  = [];
-let bestDist   = 0;
+let IS_MOBILE   = false;
+let shakeTimer  = 0;
+let particles   = [];
+let bestDist    = 0;
+let linkButtons = [];
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJumps, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -911,6 +918,14 @@ function drawRules() {
     textSize(sz * 0.036);
     text(r.name.slice(0, nameChars), textX, iy - sz * 0.022);
 
+    // LOCAL badge — shown once the name is fully typed
+    if (r.local && nameChars >= r.name.length) {
+      fill(80, 255, 140);
+      textSize(sz * 0.022);
+      textAlign(LEFT, CENTER);
+      text('★ LOCAL', textX, iy - sz * 0.058);
+    }
+
     fill(r.bad ? color(218, 88, 88) : color(88, 200, 88));
     textSize(sz * 0.030);
     let hintVis    = r.hint.slice(0, hintChars);
@@ -1032,15 +1047,71 @@ function drawGameOver() {
   noStroke();
   rect(cardX + cardPad, cardTop + cardH * 0.748, cardW - cardPad * 2, 1);
 
-  // ── Instagram CTA ─────────────────────────────────────────────────
-  fill(255, 255, 255);
+  // ── Partner link buttons ─────────────────────────────────────────
+  linkButtons = [];
+
+  // "support local" label
+  fill(120, 255, 155);
   textAlign(CENTER, CENTER);
-  textSize(max(13, sz * 0.038));
-  noStroke();
-  text('@searchcentralfl', width * 0.5, cardTop + cardH * 0.830);
-  fill(185, 180, 218);
   textSize(max(9, sz * 0.024));
-  text('follow us on instagram', width * 0.5, cardTop + cardH * 0.898);
+  noStroke();
+  text('★  SUPPORT LOCAL  ★', width * 0.5, cardTop + cardH * 0.773);
+
+  // Two business buttons side by side
+  let btnH   = max(36, cardH * 0.082);
+  let btnGap = cardW * 0.030;
+  let btnW   = (cardW - cardPad * 2 - btnGap) * 0.5;
+  let btnY   = cardTop + cardH * 0.798;
+
+  for (let i = 0; i < 2; i++) {
+    let p   = PARTNERS[i];
+    let bx  = cardX + cardPad + i * (btnW + btnGap);
+
+    // Button background
+    noStroke();
+    fill(22, 20, 42);
+    rect(bx, btnY, btnW, btnH, 4);
+    stroke(p.col[0], p.col[1], p.col[2], 180);
+    strokeWeight(1);
+    noFill();
+    rect(bx + 0.5, btnY + 0.5, btnW - 1, btnH - 1, 4);
+    noStroke();
+
+    // Business name
+    fill(p.col[0], p.col[1], p.col[2]);
+    textAlign(CENTER, CENTER);
+    textSize(max(8, sz * 0.026));
+    text(p.name, bx + btnW * 0.5, btnY + btnH * 0.35);
+
+    // Handle
+    fill(200, 195, 225);
+    textSize(max(7, sz * 0.020));
+    text(p.handle, bx + btnW * 0.5, btnY + btnH * 0.72);
+
+    linkButtons.push({ x: bx, y: btnY, w: btnW, h: btnH, url: p.url });
+  }
+
+  // SearchCentralFL full-width button
+  let sfY = btnY + btnH + cardH * 0.022;
+  let sfH = max(32, cardH * 0.068);
+  let p2  = PARTNERS[2];
+  noStroke();
+  fill(22, 20, 42);
+  rect(cardX + cardPad, sfY, cardW - cardPad * 2, sfH, 4);
+  stroke(p2.col[0], p2.col[1], p2.col[2], 180);
+  strokeWeight(1);
+  noFill();
+  rect(cardX + cardPad + 0.5, sfY + 0.5, cardW - cardPad * 2 - 1, sfH - 1, 4);
+  noStroke();
+
+  fill(p2.col[0], p2.col[1], p2.col[2]);
+  textAlign(CENTER, CENTER);
+  textSize(max(8, sz * 0.026));
+  text(p2.name + '  ' + p2.handle, width * 0.5, sfY + sfH * 0.42);
+  fill(185, 180, 218);
+  textSize(max(7, sz * 0.019));
+  text('follow us on instagram', width * 0.5, sfY + sfH * 0.76);
+  linkButtons.push({ x: cardX + cardPad, y: sfY, w: cardW - cardPad * 2, h: sfH, url: p2.url });
 
   // ── Tap to play again ─────────────────────────────────────────────
   if (floor(frameCount / 36) % 2 === 0) {
@@ -1048,7 +1119,7 @@ function drawGameOver() {
     textAlign(CENTER, CENTER);
     textSize(max(11, sz * 0.032));
     noStroke();
-    text('TAP TO PLAY AGAIN', width * 0.5, cardTop + cardH * 0.955);
+    text('TAP TO PLAY AGAIN', width * 0.5, sfY + sfH + cardH * 0.040);
   }
 }
 
@@ -1101,6 +1172,14 @@ function handleInput() {
       ch.jumpsLeft--;
     }
   } else if (gameState === 'GAMEOVER') {
+    // Link buttons take priority — don't restart if player tapped one
+    for (let btn of linkButtons) {
+      if (mouseX >= btn.x && mouseX <= btn.x + btn.w &&
+          mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+        window.open(btn.url, '_blank');
+        return;
+      }
+    }
     stopMusic();
     initGame();
     gameState = 'PLAYING';
