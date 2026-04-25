@@ -961,74 +961,80 @@ function drawGameOver() {
   // ── Animated scrolling background ────────────────────────────────
   drawSceneBg(frameCount * 3.8, null);
 
-  // ── Card panel ───────────────────────────────────────────────────
-  let cardW  = min(width * 0.90, sz * 0.94);
-  let cardX  = width * 0.5 - cardW * 0.5;
-  let cardPad = cardW * 0.06;
-
-  // Title image — sits above the card, large and floating
-  let titleW = 0, titleH = 0, titleY = height * 0.018;
-  if (titleImg && titleImg.width > 0) {
-    titleW = min(width * 0.94, sz * 0.90);
-    titleH = titleW * (titleImg.height / titleImg.width);
-    if (titleH > height * 0.36) { titleH = height * 0.36; titleW = titleH * (titleImg.width / titleImg.height); }
-    let floatY = sin(frameCount * 0.042) * sz * 0.010;
-    image(titleImg, width * 0.5 - titleW * 0.5, titleY + floatY, titleW, titleH);
-  }
-
-  let cardTop = titleY + titleH + sz * 0.022;
-  let cardBot = height * 0.958;
+  // ── Card — full-screen with small margin ─────────────────────────
+  let cardW   = min(width * 0.92, sz * 0.96);
+  let cardX   = width * 0.5 - cardW * 0.5;
+  let cardPad = cardW * 0.055;
+  let cardTop = height * 0.018;
+  let cardBot = height * 0.984;
   let cardH   = cardBot - cardTop;
 
-  // Card background
+  // Card background + border
   noStroke();
-  fill(10, 14, 30, 224);
+  fill(10, 14, 30, 228);
   rect(cardX, cardTop, cardW, cardH, 6);
-
-  // Gold border
   stroke(195, 158, 38);
   strokeWeight(2);
   noFill();
   rect(cardX + 1, cardTop + 1, cardW - 2, cardH - 2, 5);
   noStroke();
 
-  // Thin accent line across top of card
+  // ── Header: title PNG inside card ────────────────────────────────
+  let hdrPad  = cardW * 0.05;
+  let maxTW   = cardW - hdrPad * 2;
+  let maxTH   = cardH * 0.175;
+  let tw = maxTW, th = 0;
+  if (titleImg && titleImg.width > 0) {
+    th = tw * (titleImg.height / titleImg.width);
+    if (th > maxTH) { th = maxTH; tw = th * (titleImg.width / titleImg.height); }
+    let floatY = sin(frameCount * 0.042) * sz * 0.007;
+    image(titleImg, width * 0.5 - tw * 0.5, cardTop + cardH * 0.022 + floatY, tw, th);
+  }
+
+  // Gold accent rule below header
+  let ruleY = cardTop + cardH * 0.022 + th + sz * 0.014;
   fill(195, 158, 38);
-  rect(cardX + cardPad, cardTop + cardH * 0.085, cardW - cardPad * 2, 1);
+  rect(cardX + cardPad, ruleY, cardW - cardPad * 2, 1);
 
-  // ── "GREAT RUN!" heading ──────────────────────────────────────────
+  // ── Score section ─────────────────────────────────────────────────
+  // Character sprite + "GREAT RUN!" side by side
+  let scoreTop = ruleY + sz * 0.010;
+  let chSz     = min(cardH * 0.11, cardW * 0.18);
+  let chSprY   = scoreTop + sz * 0.004;
+
+  image(charImg, cardX + cardPad, chSprY, chSz, chSz);
+
+  let textCX = cardX + cardPad + chSz + cardW * 0.03;
+  let textCW = cardX + cardW - cardPad - textCX;
+
   fill(255, 218, 48);
-  textAlign(CENTER, CENTER);
-  textSize(max(18, sz * 0.072));
+  textAlign(LEFT, CENTER);
+  textSize(max(14, sz * 0.056));
   noStroke();
-  text('GREAT RUN!', width * 0.5, cardTop + cardH * 0.135);
+  text('GREAT RUN!', textCX, chSprY + chSz * 0.30);
 
-  // ── Distance badge ────────────────────────────────────────────────
   let dStr = finalDist >= 1000
     ? floor(finalDist / 1000) + ',' + String(finalDist % 1000).padStart(3, '0') + ' m'
     : finalDist + ' m';
   fill(255, 255, 255);
-  textSize(max(22, sz * 0.092));
-  text(dStr, width * 0.5, cardTop + cardH * 0.295);
-  fill(165, 195, 255);
-  textSize(max(10, sz * 0.028));
-  text('distance explored', width * 0.5, cardTop + cardH * 0.385);
+  textSize(max(18, sz * 0.074));
+  text(dStr, textCX, chSprY + chSz * 0.70);
 
   if (bestDist > 0) {
     fill(255, 195, 60);
-    textSize(max(9, sz * 0.026));
-    text('BEST  ' + bestDist + ' m', width * 0.5, cardTop + cardH * 0.435);
+    textSize(max(8, sz * 0.022));
+    text('BEST  ' + bestDist + ' m', textCX, chSprY + chSz * 1.00);
   }
 
-  // Thin divider
+  // ── Item stats — compact single row ───────────────────────────────
+  let statsTop = chSprY + chSz + sz * 0.016;
   fill(50, 48, 78);
   noStroke();
-  rect(cardX + cardPad, cardTop + cardH * 0.47, cardW - cardPad * 2, 1);
+  rect(cardX + cardPad, statsTop, cardW - cardPad * 2, 1);
 
-  // ── Item stats row ────────────────────────────────────────────────
-  let iRowMid = cardTop + cardH * 0.590;
   let iSlot   = (cardW - cardPad * 2) / LEGEND_ROWS.length;
-  let iSz     = min(sz * 0.068, iSlot * 0.52);
+  let iSz     = min(sz * 0.048, iSlot * 0.42);
+  let iRowMid = statsTop + iSz * 0.72 + sz * 0.010;
 
   for (let i = 0; i < LEGEND_ROWS.length; i++) {
     let it  = LEGEND_ROWS[i];
@@ -1037,89 +1043,100 @@ function drawGameOver() {
     drawSprite(it.sp, it.sc, cx - iw * 0.5, iRowMid - iSz * 0.55, iw, iSz);
     fill(it.bad ? color(255, 138, 118) : color(118, 255, 160));
     textAlign(CENTER, CENTER);
-    textSize(max(10, sz * 0.030));
+    textSize(max(8, sz * 0.024));
     noStroke();
     text('\xd7' + (itemCounts ? (itemCounts[it.key] || 0) : 0), cx, iRowMid + iSz * 0.62);
   }
 
-  // Thin divider
-  fill(50, 48, 78);
-  noStroke();
-  rect(cardX + cardPad, cardTop + cardH * 0.748, cardW - cardPad * 2, 1);
-
-  // ── Partner link buttons ─────────────────────────────────────────
+  // ── Partner link buttons ──────────────────────────────────────────
   linkButtons = [];
 
-  // "support local" label
+  let linksTop = iRowMid + iSz * 0.72 + sz * 0.018;
+  fill(50, 48, 78);
+  noStroke();
+  rect(cardX + cardPad, linksTop, cardW - cardPad * 2, 1);
+
   fill(120, 255, 155);
   textAlign(CENTER, CENTER);
   textSize(max(9, sz * 0.024));
   noStroke();
-  text('★  SUPPORT LOCAL  ★', width * 0.5, cardTop + cardH * 0.773);
+  let labelY = linksTop + sz * 0.024;
+  text('★  SUPPORT LOCAL  ★', width * 0.5, labelY);
 
-  // Two business buttons side by side
-  let btnH   = max(36, cardH * 0.082);
-  let btnGap = cardW * 0.030;
-  let btnW   = (cardW - cardPad * 2 - btnGap) * 0.5;
-  let btnY   = cardTop + cardH * 0.798;
+  // Remaining space below label split between 3 buttons + replay text
+  let afterLabel = labelY + sz * 0.014;
+  let remaining  = cardBot - afterLabel - sz * 0.050; // reserve ~50px for replay
+  let btnH       = max(44, remaining * 0.37);
+  let btnGap     = cardW * 0.025;
+  let btnW       = (cardW - cardPad * 2 - btnGap) * 0.5;
 
+  // Two local business buttons side by side
+  let bizY = afterLabel;
   for (let i = 0; i < 2; i++) {
-    let p   = PARTNERS[i];
-    let bx  = cardX + cardPad + i * (btnW + btnGap);
+    let p  = PARTNERS[i];
+    let bx = cardX + cardPad + i * (btnW + btnGap);
 
-    // Button background
     noStroke();
     fill(22, 20, 42);
-    rect(bx, btnY, btnW, btnH, 4);
-    stroke(p.col[0], p.col[1], p.col[2], 180);
-    strokeWeight(1);
+    rect(bx, bizY, btnW, btnH, 5);
+    stroke(p.col[0], p.col[1], p.col[2], 200);
+    strokeWeight(1.5);
     noFill();
-    rect(bx + 0.5, btnY + 0.5, btnW - 1, btnH - 1, 4);
+    rect(bx + 0.75, bizY + 0.75, btnW - 1.5, btnH - 1.5, 5);
     noStroke();
 
-    // Business name
     fill(p.col[0], p.col[1], p.col[2]);
     textAlign(CENTER, CENTER);
-    textSize(max(8, sz * 0.026));
-    text(p.name, bx + btnW * 0.5, btnY + btnH * 0.35);
+    textSize(max(10, sz * 0.032));
+    text(p.name, bx + btnW * 0.5, bizY + btnH * 0.36);
 
-    // Handle
-    fill(200, 195, 225);
-    textSize(max(7, sz * 0.020));
-    text(p.handle, bx + btnW * 0.5, btnY + btnH * 0.72);
+    fill(210, 205, 235);
+    textSize(max(8, sz * 0.024));
+    text(p.handle, bx + btnW * 0.5, bizY + btnH * 0.67);
 
-    linkButtons.push({ x: bx, y: btnY, w: btnW, h: btnH, url: p.url });
+    fill(p.col[0], p.col[1], p.col[2], 140);
+    textSize(max(7, sz * 0.018));
+    text('tap to visit ↗', bx + btnW * 0.5, bizY + btnH * 0.90);
+
+    linkButtons.push({ x: bx, y: bizY, w: btnW, h: btnH, url: p.url });
   }
 
-  // SearchCentralFL full-width button
-  let sfY = btnY + btnH + cardH * 0.022;
-  let sfH = max(32, cardH * 0.068);
-  let p2  = PARTNERS[2];
+  // SearchCentralFL — full-width button
+  let sfBtnH = max(44, remaining * 0.30);
+  let sfY    = bizY + btnH + btnGap;
+  let p2     = PARTNERS[2];
+
   noStroke();
   fill(22, 20, 42);
-  rect(cardX + cardPad, sfY, cardW - cardPad * 2, sfH, 4);
-  stroke(p2.col[0], p2.col[1], p2.col[2], 180);
-  strokeWeight(1);
+  rect(cardX + cardPad, sfY, cardW - cardPad * 2, sfBtnH, 5);
+  stroke(p2.col[0], p2.col[1], p2.col[2], 200);
+  strokeWeight(1.5);
   noFill();
-  rect(cardX + cardPad + 0.5, sfY + 0.5, cardW - cardPad * 2 - 1, sfH - 1, 4);
+  rect(cardX + cardPad + 0.75, sfY + 0.75, cardW - cardPad * 2 - 1.5, sfBtnH - 1.5, 5);
   noStroke();
 
   fill(p2.col[0], p2.col[1], p2.col[2]);
   textAlign(CENTER, CENTER);
-  textSize(max(8, sz * 0.026));
-  text(p2.name + '  ' + p2.handle, width * 0.5, sfY + sfH * 0.42);
-  fill(185, 180, 218);
-  textSize(max(7, sz * 0.019));
-  text('follow us on instagram', width * 0.5, sfY + sfH * 0.76);
-  linkButtons.push({ x: cardX + cardPad, y: sfY, w: cardW - cardPad * 2, h: sfH, url: p2.url });
+  textSize(max(10, sz * 0.032));
+  text(p2.name, width * 0.5, sfY + sfBtnH * 0.32);
+
+  fill(210, 205, 235);
+  textSize(max(8, sz * 0.024));
+  text(p2.handle, width * 0.5, sfY + sfBtnH * 0.60);
+
+  fill(p2.col[0], p2.col[1], p2.col[2], 140);
+  textSize(max(7, sz * 0.018));
+  text('follow us on instagram  ↗', width * 0.5, sfY + sfBtnH * 0.85);
+
+  linkButtons.push({ x: cardX + cardPad, y: sfY, w: cardW - cardPad * 2, h: sfBtnH, url: p2.url });
 
   // ── Tap to play again ─────────────────────────────────────────────
   if (floor(frameCount / 36) % 2 === 0) {
     fill(255, 218, 48);
     textAlign(CENTER, CENTER);
-    textSize(max(11, sz * 0.032));
+    textSize(max(10, sz * 0.030));
     noStroke();
-    text('TAP TO PLAY AGAIN', width * 0.5, sfY + sfH + cardH * 0.040);
+    text('TAP ANYWHERE TO PLAY AGAIN', width * 0.5, sfY + sfBtnH + sz * 0.030);
   }
 }
 
