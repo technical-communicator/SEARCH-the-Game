@@ -134,12 +134,19 @@ const CS = [
 ];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// GRAVITY and JUMP_FORCE are derived per-unit in recalcLayout() so that
-// jump height = unit × 1.6 and time-to-peak = 23 frames on every screen size.
-// Formula: gravity = unit × 3.2/529,  jumpForce = -(unit × 73.6/529)
 const GROUND_RATIO  = 0.78;
 const BASE_SPEED    = 5;
 const INVULN_FRAMES = 90;
+
+const INTRO_TAG = 'Local shops vs. franchise chains.';
+const RULES_TITLE = 'HOW TO PLAY';
+
+const LEGEND_ROWS = [
+  { yFrac: 0.30, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
+  { yFrac: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
+  { yFrac: 0.62, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
+  { yFrac: 0.78, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
+];
 
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -155,15 +162,18 @@ let hearts, invulnTimer;
 let spawnTimer, nextSpawnIn;
 let clouds;
 let chGravity, chJumpForce;
-let itemCounts;    // { burger, shake, boba, coffee }
-let finalDist = 0; // distance when player died
+let itemCounts;
+let finalDist  = 0;
 let bgTrees;
+let introTrees;
+let introOffset = 0;
+let introTagIdx = 0;
 
-// Typewriter / rules reveal state
-const RULES_TITLE = 'HOW TO PLAY';
-let rwCharIdx = 0;   // chars of title revealed
-let rwPhase   = 0;   // how many instruction rows are visible (0-5)
-let rwTimer   = 0;   // frame counter used for pacing
+// Rules typewriter state
+let rwCharIdx   = 0;  // chars of title revealed
+let rwPhase     = 0;  // which row is currently being typed (0-3); 4 = all done
+let rwLineChars = 0;  // chars of current row revealed
+let rwTimer     = 0;
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJumps, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -205,9 +215,13 @@ function preload() {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noSmooth(); // nearest-neighbour scaling for pixel art crispness
+  noSmooth();
   textFont('monospace');
   initGame();
+  introTrees = [];
+  for (let i = 0; i < 8; i++) {
+    introTrees.push(randomTree(random(0, width * 1.4)));
+  }
 }
 
 function draw() {
@@ -477,7 +491,7 @@ function drawSkyAndGround() {
   }
 
   // Ground with scrolling brick road
-  drawBrickRoad();
+  drawBrickRoad(scrollDist);
 }
 
 // 7×6 pixel-art heart
@@ -519,24 +533,24 @@ function drawPixelTree(tx, ty, tw, th, shade) {
   rect(floor(tx + (tw - trunkW) * 0.5), floor(ty + canopyH), trunkW, ceil(th * 0.28));
 }
 
-function drawBrickRoad() {
+function drawBrickRoad(offset) {
   let groundH = height - groundY;
   let brickH  = max(4, floor(groundH / 6));
   let brickW  = brickH * 3.2;
   let mortar  = 1;
 
   noStroke();
-  fill(72, 54, 40); // mortar
+  fill(72, 54, 40);
   rect(0, groundY, width, groundH);
 
   for (let row = 0; row < 6; row++) {
     let by        = groundY + row * brickH;
     let rowOff    = (row % 2 === 0) ? 0 : brickW * 0.5;
-    let scrollOff = scrollDist % brickW;
+    let scrollOff = offset % brickW;
     for (let bx = -(scrollOff + brickW) + rowOff; bx < width + brickW; bx += brickW) {
       fill(155, 88, 60);
       rect(floor(bx) + mortar, by + mortar, brickW - mortar, brickH - mortar);
-      fill(170, 102, 72); // subtle top highlight only
+      fill(170, 102, 72);
       rect(floor(bx) + mortar, by + mortar, brickW - mortar, 1);
     }
   }
@@ -581,11 +595,12 @@ function drawGuiFrame() {
   let distM = floor(scrollDist / 4);
   fill(255, 220, 48);
   textAlign(RIGHT, CENTER);
-  textSize(max(9, ft * 0.34));
+  textSize(max(11, ft * 0.44));
   noStroke();
   text(distM + 'm', width - bw - 10, ft * 0.5);
 
   // Speed gauge — 5 pip dots
+
   let speedNorm  = constrain((scrollSpeed - BASE_SPEED) / 13, 0, 1);
   let filledPips = max(1, round(speedNorm * 5));
   let pipR   = max(3, floor(ft * 0.10));
@@ -621,7 +636,7 @@ function drawGuiFrame() {
     let cnt  = itemCounts ? (itemCounts[it.key] || 0) : 0;
     fill(it.bad ? color(255, 130, 120) : color(120, 255, 155));
     textAlign(LEFT, CENTER);
-    textSize(max(9, ft * 0.33));
+    textSize(max(11, ft * 0.43));
     noStroke();
     text('\xd7' + cnt, ix + iw + 3, cy);
   }
@@ -659,98 +674,165 @@ function drawGame() {
 // ─── Intro / Rules screens ────────────────────────────────────────────────────
 
 function drawIntro() {
-  // Sky gradient background
-  noStroke();
-  fill(95, 175, 228);
-  rect(0, 0, width, height * 0.75);
-  fill(78, 152, 72);
-  rect(0, height * 0.75, width, height * 0.25);
+  let sz = min(width, height);
 
-  let sz     = min(width, height);
-  let floatY = sin(frameCount * 0.042) * sz * 0.016; // gentle bob
-
-  // Title image — floating centred
-  if (titleImg && titleImg.width > 0) {
-    let titleW = sz * 0.55;
-    let titleH = titleW * (titleImg.height / titleImg.width);
-    let titleX = width / 2 - titleW / 2;
-    let titleY = height / 2 - titleH / 2 + floatY;
-    image(titleImg, titleX, titleY, titleW, titleH);
+  // ── Advance scroll and trees ──────────────────────────────────────
+  introOffset += 3.8;
+  for (let t of introTrees) {
+    t.x -= 3.8 * 0.22;
+    if (t.x + t.h * 0.55 < 0) {
+      t.x = width + random(40, 160);
+      t.h = random(getUnit() * 0.38, getUnit() * 0.72);
+    }
   }
 
-  // "Tap to continue" blinks after 80 frames
-  if (frameCount > 80 && floor(frameCount / 38) % 2 === 0) {
+  // ── Moving scene background ───────────────────────────────────────
+  noStroke();
+  let bands  = SKY_BANDS.length;
+  let bandPx = max(1, floor(groundY / bands));
+  for (let b = 0; b < bands; b++) {
+    let sc = SKY_BANDS[b];
+    fill(sc[0], sc[1], sc[2]);
+    rect(0, b * bandPx, width, bandPx + 1);
+  }
+  let lastSc = SKY_BANDS[bands - 1];
+  fill(lastSc[0], lastSc[1], lastSc[2]);
+  rect(0, bands * bandPx, width, groundY - bands * bandPx);
+
+  // Parallax trees
+  for (let t of introTrees) {
+    let tw = t.h * 0.55;
+    drawPixelTree(t.x - tw * 0.5, groundY - t.h, tw, t.h, t.shade);
+  }
+
+  // Clouds
+  let cDefs = [{f:0, y:0.14, sc:1.4}, {f:0.38, y:0.27, sc:1.9}, {f:0.66, y:0.11, sc:1.1}];
+  for (let cd of cDefs) {
+    let cx  = ((cd.f * width + introOffset * 0.55) % (width * 1.4 + sz * 0.2)) - sz * 0.12;
+    let cw  = getUnit() * 0.85 * cd.sc;
+    let ch2 = cw * (CS.length / CS[0].length);
+    drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
+  }
+
+  // Brick road
+  drawBrickRoad(introOffset);
+
+  // Character walking across
+  let unit = getUnit();
+  let chX  = ((introOffset * 1.0) % (width * 1.6)) - unit;
+  let bob  = (floor(introOffset / 10) % 2 === 0) ? 0 : -unit * 0.05;
+  if (chX > -unit && chX < width + unit) {
+    image(charImg, chX, groundY - unit + bob, unit, unit);
+  }
+
+  // ── Semi-transparent overlay to lift content above scene ─────────
+  fill(0, 0, 0, 68);
+  rect(0, 0, width, height);
+
+  // ── Floating title image ─────────────────────────────────────────
+  if (titleImg && titleImg.width > 0) {
+    let tw     = min(sz * 0.58, width * 0.78);
+    let th     = tw * (titleImg.height / titleImg.width);
+    let floatY = sin(frameCount * 0.038) * sz * 0.013;
+    image(titleImg, width * 0.5 - tw * 0.5, height * 0.10 + floatY, tw, th);
+  }
+
+  // ── Typewriter tagline (starts after 55 frames) ───────────────────
+  if (frameCount > 55 && introTagIdx < INTRO_TAG.length) {
+    if (frameCount % 3 === 0) introTagIdx++;
+  }
+  if (introTagIdx > 0) {
+    let visTxt = INTRO_TAG.slice(0, introTagIdx);
+    let blink  = (introTagIdx < INTRO_TAG.length || floor(frameCount / 18) % 2 === 0);
+    fill(255, 240, 205);
+    textAlign(CENTER, CENTER);
+    textSize(sz * 0.042);
+    noStroke();
+    text(visTxt + (blink ? '_' : ''), width * 0.5, height * 0.76);
+  }
+
+  // ── Blinking "TAP TO BEGIN" once tagline completes ────────────────
+  if (introTagIdx >= INTRO_TAG.length && floor(frameCount / 34) % 2 === 0) {
     fill(255, 220, 48);
     textAlign(CENTER, CENTER);
-    textSize(sz * 0.033);
-    text('Tap or click to continue', width / 2, height * 0.90);
+    textSize(sz * 0.048);
+    noStroke();
+    text('TAP TO BEGIN', width * 0.5, height * 0.89);
   }
 }
 
 function drawRules() {
-  // Background
   noStroke();
   fill(12, 12, 20);
   rect(0, 0, width, height);
 
   let sz = min(width, height);
 
-  // Title typewriter
+  // ── Title typewriter ─────────────────────────────────────────────
   let visTitle = RULES_TITLE.slice(0, rwCharIdx);
-  let cursor   = (rwCharIdx < RULES_TITLE.length && frameCount % 22 < 11) ? '|' : '';
+  let titleDone = rwCharIdx >= RULES_TITLE.length;
+  let titleCursor = (!titleDone && floor(frameCount / 14) % 2 === 0) ? '█' : (titleDone ? '' : ' ');
   fill(255, 220, 48);
   textAlign(CENTER, CENTER);
-  textSize(sz * 0.058);
+  textSize(sz * 0.074);
   noStroke();
-  text(visTitle + cursor, width / 2, height * 0.13);
+  text(visTitle + titleCursor, width / 2, height * 0.13);
 
   // Divider
-  stroke(80, 80, 80);
-  strokeWeight(1);
-  line(width / 2 - sz * 0.38, height * 0.20, width / 2 + sz * 0.38, height * 0.20);
+  stroke(60, 55, 85);
+  strokeWeight(2);
+  line(width / 2 - sz * 0.40, height * 0.21, width / 2 + sz * 0.40, height * 0.21);
   noStroke();
 
-  // Instruction rows — each revealed after rwPhase advances
-  let iconSz = sz * 0.10;
-  let iconX  = width / 2 - sz * 0.34;
-  let textX  = iconX + iconSz + sz * 0.025;
-  let rows = [
-    { y: 0.31, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
-    { y: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
-    { y: 0.61, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
-    { y: 0.76, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
-  ];
+  // ── Instruction rows — typing out one at a time ───────────────────
+  let iconSz = sz * 0.105;
+  let iconX  = width / 2 - sz * 0.36;
+  let textX  = iconX + iconSz + sz * 0.028;
 
-  for (let i = 0; i < rows.length; i++) {
-    if (rwPhase < i + 1) break;
-    let r  = rows[i];
-    let iy = height * r.y;
-    let ih = iconSz * (r.sp.length / r.sp[0].length);
-    drawSprite(r.sp, r.sc, iconX, iy - ih / 2, iconSz, ih);
+  for (let i = 0; i <= min(rwPhase, LEGEND_ROWS.length - 1); i++) {
+    let r   = LEGEND_ROWS[i];
+    let iy  = height * r.yFrac;
+    let ih  = iconSz * (r.sp.length / r.sp[0].length);
+    let rowDone = i < rwPhase;
+
+    // Icon — always full once row starts
+    drawSprite(r.sp, r.sc, iconX, iy - ih * 0.5, iconSz, ih);
+
+    let nameChars = rowDone ? r.name.length : min(rwLineChars, r.name.length);
+    let hintChars = rowDone ? r.hint.length : max(0, rwLineChars - r.name.length);
+    let rowActive = (i === rwPhase && rwPhase < LEGEND_ROWS.length);
+    let cur = (rowActive && floor(frameCount / 14) % 2 === 0) ? '█' : '';
 
     fill(r.bad ? color(255, 155, 155) : color(155, 255, 155));
     textAlign(LEFT, CENTER);
-    textSize(sz * 0.027);
-    text(r.name, textX, iy - sz * 0.017);
+    textSize(sz * 0.036);
+    text(r.name.slice(0, nameChars), textX, iy - sz * 0.022);
+
     fill(r.bad ? color(218, 88, 88) : color(88, 200, 88));
-    textSize(sz * 0.023);
-    text(r.hint, textX, iy + sz * 0.017);
+    textSize(sz * 0.030);
+    let hintVis = r.hint.slice(0, hintChars);
+    text(hintVis + (hintChars < r.hint.length ? cur : (nameChars < r.name.length ? cur : '')), textX, iy + sz * 0.022);
   }
 
-  // "Tap to play" blinks once all rows shown
-  if (rwPhase >= 5 && floor(frameCount / 38) % 2 === 0) {
+  // ── "Tap to play" blinks when all rows done ───────────────────────
+  if (rwPhase >= LEGEND_ROWS.length && floor(frameCount / 36) % 2 === 0) {
     fill(255, 220, 48);
     textAlign(CENTER, CENTER);
-    textSize(sz * 0.038);
-    text('Tap to play!', width / 2, height * 0.93);
+    textSize(sz * 0.050);
+    text('TAP TO PLAY', width / 2, height * 0.93);
   }
 
-  // Advance typewriter / row reveals each frame
+  // ── Advance typewriter state ──────────────────────────────────────
   rwTimer++;
   if (rwCharIdx < RULES_TITLE.length) {
-    if (rwTimer % 5 === 0) rwCharIdx++;
-  } else if (rwPhase < 5) {
-    if (rwTimer % 42 === 0) rwPhase++;
+    if (rwTimer % 3 === 0) rwCharIdx++;
+  } else if (rwPhase < LEGEND_ROWS.length) {
+    if (rwTimer % 3 === 0) rwLineChars++;
+    let r = LEGEND_ROWS[rwPhase];
+    if (rwLineChars >= r.name.length + r.hint.length + 8) {
+      rwPhase++;
+      rwLineChars = 0;
+    }
   }
 }
 
@@ -857,27 +939,30 @@ function touchStarted()  { handleInput(); return false; }
 
 function handleInput() {
   if (gameState === 'INTRO') {
-    // Move to rules screen, reset typewriter
-    gameState = 'RULES';
-    rwCharIdx = 0; rwPhase = 0; rwTimer = 0;
+    gameState   = 'RULES';
+    rwCharIdx   = 0; rwPhase = 0; rwLineChars = 0; rwTimer = 0;
   } else if (gameState === 'RULES') {
-    if (rwPhase >= 5) {
-      // All content shown — start game
+    if (rwPhase >= LEGEND_ROWS.length) {
       initGame();
       gameState = 'PLAYING';
       startMusic();
     } else {
-      // Fast-forward remaining text on early tap
-      rwCharIdx = RULES_TITLE.length;
-      rwPhase   = 5;
+      // Fast-forward all remaining text
+      rwCharIdx   = RULES_TITLE.length;
+      rwPhase     = LEGEND_ROWS.length;
+      rwLineChars = 9999;
     }
   } else if (gameState === 'PLAYING') {
     if (ch.jumpsLeft > 0) {
       ch.vy = chJumpForce;
       ch.onGround = false;
+      if (ch.jumpsLeft === 2) {
+        playSound(sndJumps[0]);           // ground jump → always jump1
+      } else {
+        playSound(sndJumps[1 + (jumpSndIdx % 3)]); // air jump → cycle jump2–4
+        jumpSndIdx++;
+      }
       ch.jumpsLeft--;
-      playSound(sndJumps[jumpSndIdx % sndJumps.length]);
-      jumpSndIdx++;
     }
   } else if (gameState === 'GAMEOVER') {
     stopMusic();
