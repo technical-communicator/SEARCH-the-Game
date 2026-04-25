@@ -157,6 +157,7 @@ let clouds;
 let chGravity, chJumpForce;
 let itemCounts;    // { burger, shake, boba, coffee }
 let finalDist = 0; // distance when player died
+let bgTrees;
 
 // Typewriter / rules reveal state
 const RULES_TITLE = 'HOW TO PLAY';
@@ -259,6 +260,7 @@ function initGame() {
     x: width * 0.18,
     y: groundY - unit,
     vy: 0, onGround: true,
+    jumpsLeft: 2,
   };
   ({ gravity: chGravity, jumpForce: chJumpForce } = calcPhysics(unit));
 
@@ -280,6 +282,23 @@ function initGame() {
       sc:  random(0.9, 2.4),
     });
   }
+
+  bgTrees = [];
+  for (let i = 0; i < 7; i++) {
+    bgTrees.push(randomTree(random(0, width * 1.4)));
+  }
+}
+
+function randomTree(x) {
+  let unit = getUnit();
+  let shades = [
+    [52, 128, 48], [44, 112, 54], [60, 140, 42], [38, 104, 60],
+  ];
+  return {
+    x,
+    h:     random(unit * 0.38, unit * 0.72),
+    shade: random(shades),
+  };
 }
 
 function recalcLayout() {
@@ -303,6 +322,7 @@ function updateGame() {
   if (ch.y >= groundY - ch.h) {
     ch.y = groundY - ch.h;
     ch.vy = 0;
+    if (!ch.onGround) ch.jumpsLeft = 2; // restore on landing
     ch.onGround = true;
   } else {
     ch.onGround = false;
@@ -314,6 +334,16 @@ function updateGame() {
     if (c.x < -130) {
       c.x = width + random(50, 280);
       c.y = random(height * 0.04, groundY * 0.38);
+    }
+  }
+
+  // Parallax background trees (0.22× speed)
+  for (let t of bgTrees) {
+    t.x -= scrollSpeed * 0.22;
+    if (t.x + t.h < 0) {
+      t.x = width + random(30, 180);
+      let unit = getUnit();
+      t.h = random(unit * 0.38, unit * 0.72);
     }
   }
 
@@ -426,6 +456,12 @@ function drawSkyAndGround() {
   fill(lastSc[0], lastSc[1], lastSc[2]);
   rect(0, bands * bandPx, width, groundY - bands * bandPx);
 
+  // Background trees (slow parallax)
+  for (let t of bgTrees) {
+    let tw = t.h * 0.55;
+    drawPixelTree(t.x - tw * 0.5, groundY - t.h, tw, t.h, t.shade);
+  }
+
   // Clouds
   for (let c of clouds) {
     let cw  = getUnit() * 0.85 * c.sc;
@@ -459,36 +495,42 @@ function drawPixelHeart(x, y, pxSize, filled) {
   }
 }
 
+function drawPixelTree(tx, ty, tw, th, shade) {
+  noStroke();
+  let canopyH = th * 0.72;
+  let tiers   = 4;
+  for (let t = 0; t < tiers; t++) {
+    let tierY = ty + (t / tiers) * canopyH;
+    let tierW = tw * (0.28 + (t / tiers) * 0.72);
+    let tierH = canopyH / tiers + 1;
+    fill(shade[0], shade[1], shade[2]);
+    rect(floor(tx + (tw - tierW) * 0.5), floor(tierY), ceil(tierW), ceil(tierH));
+  }
+  // Trunk
+  fill(98, 58, 24);
+  let trunkW = max(2, floor(tw * 0.18));
+  rect(floor(tx + (tw - trunkW) * 0.5), floor(ty + canopyH), trunkW, ceil(th * 0.28));
+}
+
 function drawBrickRoad() {
   let groundH = height - groundY;
-  let brickH  = max(6, floor(groundH / 4));
-  let brickW  = brickH * 2.8;
-  let mortar  = 2;
+  let brickH  = max(4, floor(groundH / 6));
+  let brickW  = brickH * 3.2;
+  let mortar  = 1;
 
-  // Mortar base
   noStroke();
-  fill(88, 66, 50);
+  fill(72, 54, 40); // mortar
   rect(0, groundY, width, groundH);
 
-  // 4 rows of bricks scrolling with the world
-  for (let row = 0; row < 4; row++) {
-    let by      = groundY + row * brickH;
-    let rowOff  = (row % 2 === 0) ? 0 : brickW / 2;
+  for (let row = 0; row < 6; row++) {
+    let by        = groundY + row * brickH;
+    let rowOff    = (row % 2 === 0) ? 0 : brickW * 0.5;
     let scrollOff = scrollDist % brickW;
     for (let bx = -(scrollOff + brickW) + rowOff; bx < width + brickW; bx += brickW) {
-      let shade   = ((floor((bx + scrollOff - rowOff) / brickW) + row) % 2 === 0);
-      let br = shade ? 168 : 148;
-      let bg = shade ? 96  : 82;
-      let bb = shade ? 65  : 55;
-      // Brick fill
-      fill(br, bg, bb);
+      fill(155, 88, 60);
       rect(floor(bx) + mortar, by + mortar, brickW - mortar, brickH - mortar);
-      // Top highlight
-      fill(br + 22, bg + 16, bb + 12);
-      rect(floor(bx) + mortar, by + mortar, brickW - mortar, 2);
-      // Left highlight
-      fill(br + 12, bg + 8, bb + 6);
-      rect(floor(bx) + mortar, by + mortar, 2, brickH - mortar);
+      fill(170, 102, 72); // subtle top highlight only
+      rect(floor(bx) + mortar, by + mortar, brickW - mortar, 1);
     }
   }
 }
@@ -706,25 +748,83 @@ function drawRules() {
 }
 
 function drawGameOver() {
-  background(36, 8, 8);
-  let sz = min(width, height);
+  let sz   = min(width, height);
+  let gndY = height * 0.70;
+
+  // ── Pixelated sunny-field background ───────────────────────────────
+  noStroke();
+  // Bright sky bands
+  let bands  = SKY_BANDS.length;
+  let bandPx = max(1, floor(gndY / bands));
+  for (let b = 0; b < bands; b++) {
+    let sc = SKY_BANDS[b];
+    fill(min(255, sc[0] + 28), min(255, sc[1] + 18), min(255, sc[2] + 6));
+    rect(0, b * bandPx, width, bandPx + 1);
+  }
+
+  // Animated clouds
+  let co = frameCount * 0.45;
+  let cPositions = [0.08, 0.32, 0.58, 0.82];
+  for (let i = 0; i < cPositions.length; i++) {
+    let cx  = ((cPositions[i] * width * 1.4 + co) % (width * 1.4)) - sz * 0.08;
+    let cy  = gndY * (0.12 + i * 0.1);
+    let cw  = sz * (0.10 + i * 0.018);
+    let ch2 = cw * (CS.length / CS[0].length);
+    drawSprite(CS, CC, cx, cy, cw, ch2);
+  }
+
+  // Sunny green field
+  fill(88, 172, 72);
+  rect(0, gndY, width, height - gndY);
+  // Lighter band at horizon
+  fill(112, 195, 88);
+  rect(0, gndY, width, max(4, floor(height * 0.018)));
+
+  // Pixel flowers scattered across field
+  let flowerColors = [[255,210,60],[255,120,160],[255,255,255],[180,255,120]];
+  for (let f = 0; f < 14; f++) {
+    let fx = (f * 137 + 42) % width;
+    let fy = gndY + max(6, floor((height - gndY) * 0.25)) + (f * 53) % floor((height - gndY) * 0.5);
+    let fc = flowerColors[f % flowerColors.length];
+    fill(fc[0], fc[1], fc[2]);
+    let ps = max(3, floor(sz * 0.006));
+    rect(fx, fy, ps, ps);
+    rect(fx - ps, fy - ps, ps, ps);
+    rect(fx + ps, fy - ps, ps, ps);
+    rect(fx, fy - ps * 2, ps, ps);
+    fill(255, 220, 80);
+    rect(fx, fy - ps, ps, ps); // centre
+  }
+
+  // ── title.png ─────────────────────────────────────────────────────
+  if (titleImg && titleImg.width > 0) {
+    let tw = sz * 0.40;
+    let th = tw * (titleImg.height / titleImg.width);
+    let ty = gndY * 0.04 + sin(frameCount * 0.04) * sz * 0.012;
+    image(titleImg, width * 0.5 - tw * 0.5, ty, tw, th);
+  }
+
+  // ── Text content ──────────────────────────────────────────────────
   textAlign(CENTER, CENTER);
   noStroke();
-  fill(218, 52, 52);
-  textSize(sz * 0.08);
-  text('GAME OVER', width / 2, height * 0.34);
-  fill(192, 172, 172);
-  textSize(sz * 0.03);
-  text('The franchises won this round.', width / 2, height * 0.46);
-  fill(255, 220, 48);
-  textSize(sz * 0.042);
-  text(finalDist + 'm', width / 2, height * 0.56);
-  fill(180, 160, 160);
-  textSize(sz * 0.025);
-  text('distance travelled', width / 2, height * 0.63);
-  fill(255, 220, 48);
-  textSize(sz * 0.038);
-  text('Tap or click to try again', width / 2, height * 0.76);
+
+  fill(255, 242, 80);
+  textSize(sz * 0.068);
+  text('Great Run!', width * 0.5, gndY * 0.60);
+
+  fill(255, 255, 255);
+  textSize(sz * 0.050);
+  text(finalDist + 'm', width * 0.5, gndY * 0.73);
+
+  fill(220, 255, 200);
+  textSize(sz * 0.024);
+  text('distance explored', width * 0.5, gndY * 0.81);
+
+  if (floor(frameCount / 36) % 2 === 0) {
+    fill(255, 242, 80);
+    textSize(sz * 0.034);
+    text('Tap to explore again!', width * 0.5, height * 0.91);
+  }
 }
 
 function drawWin() {
@@ -765,9 +865,10 @@ function handleInput() {
       rwPhase   = 5;
     }
   } else if (gameState === 'PLAYING') {
-    if (ch.onGround) {
+    if (ch.jumpsLeft > 0) {
       ch.vy = chJumpForce;
       ch.onGround = false;
+      ch.jumpsLeft--;
       playSound(sndJump);
     }
   } else if (gameState === 'GAMEOVER') {
