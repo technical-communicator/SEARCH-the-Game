@@ -556,6 +556,43 @@ function drawBrickRoad(offset) {
   }
 }
 
+// Shared scrolling-scene renderer used by intro, rules, and end screens
+function drawSceneBg(offset, trees) {
+  let sz = min(width, height);
+  noStroke();
+  let bands  = SKY_BANDS.length;
+  let bandPx = max(1, floor(groundY / bands));
+  for (let b = 0; b < bands; b++) {
+    let sc = SKY_BANDS[b];
+    fill(sc[0], sc[1], sc[2]);
+    rect(0, b * bandPx, width, bandPx + 1);
+  }
+  let lastSc = SKY_BANDS[bands - 1];
+  fill(lastSc[0], lastSc[1], lastSc[2]);
+  rect(0, bands * bandPx, width, groundY - bands * bandPx);
+
+  if (trees) {
+    for (let t of trees) {
+      let tw = t.h * 0.55;
+      drawPixelTree(t.x - tw * 0.5, groundY - t.h, tw, t.h, t.shade);
+    }
+  }
+
+  let cDefs = [{f:0,y:0.14,sc:1.4},{f:0.38,y:0.27,sc:1.9},{f:0.66,y:0.11,sc:1.1}];
+  for (let cd of cDefs) {
+    let cx  = ((cd.f * width + offset * 0.55) % (width * 1.4 + sz * 0.2)) - sz * 0.12;
+    let cw  = getUnit() * 0.85 * cd.sc;
+    let ch2 = cw * (CS.length / CS[0].length);
+    drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
+  }
+
+  fill(88, 172, 72);
+  rect(0, groundY, width, height - groundY);
+  fill(108, 190, 86);
+  rect(0, groundY, width, max(3, floor(height * 0.014)));
+  drawBrickRoad(offset);
+}
+
 function drawGuiFrame() {
   let sz  = min(width, height);
   let ft  = max(42, floor(sz * 0.088)); // frame band height
@@ -676,7 +713,7 @@ function drawGame() {
 function drawIntro() {
   let sz = min(width, height);
 
-  // ── Advance scroll and trees ──────────────────────────────────────
+  // Scroll the intro scene
   introOffset += 3.8;
   for (let t of introTrees) {
     t.x -= 3.8 * 0.22;
@@ -686,36 +723,7 @@ function drawIntro() {
     }
   }
 
-  // ── Moving scene background ───────────────────────────────────────
-  noStroke();
-  let bands  = SKY_BANDS.length;
-  let bandPx = max(1, floor(groundY / bands));
-  for (let b = 0; b < bands; b++) {
-    let sc = SKY_BANDS[b];
-    fill(sc[0], sc[1], sc[2]);
-    rect(0, b * bandPx, width, bandPx + 1);
-  }
-  let lastSc = SKY_BANDS[bands - 1];
-  fill(lastSc[0], lastSc[1], lastSc[2]);
-  rect(0, bands * bandPx, width, groundY - bands * bandPx);
-
-  // Parallax trees
-  for (let t of introTrees) {
-    let tw = t.h * 0.55;
-    drawPixelTree(t.x - tw * 0.5, groundY - t.h, tw, t.h, t.shade);
-  }
-
-  // Clouds
-  let cDefs = [{f:0, y:0.14, sc:1.4}, {f:0.38, y:0.27, sc:1.9}, {f:0.66, y:0.11, sc:1.1}];
-  for (let cd of cDefs) {
-    let cx  = ((cd.f * width + introOffset * 0.55) % (width * 1.4 + sz * 0.2)) - sz * 0.12;
-    let cw  = getUnit() * 0.85 * cd.sc;
-    let ch2 = cw * (CS.length / CS[0].length);
-    drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
-  }
-
-  // Brick road
-  drawBrickRoad(introOffset);
+  drawSceneBg(introOffset, introTrees);
 
   // Character walking across
   let unit = getUnit();
@@ -725,45 +733,66 @@ function drawIntro() {
     image(charImg, chX, groundY - unit + bob, unit, unit);
   }
 
-  // ── Semi-transparent overlay to lift content above scene ─────────
-  fill(0, 0, 0, 68);
+  // Vignette
+  noStroke();
+  fill(0, 0, 0, 72);
   rect(0, 0, width, height);
 
-  // ── Floating title image ─────────────────────────────────────────
+  // ── Title image — larger on all screens, especially mobile ────────
   if (titleImg && titleImg.width > 0) {
-    let tw     = min(sz * 0.58, width * 0.78);
+    let tw     = min(width * 0.88, sz * 0.80);
     let th     = tw * (titleImg.height / titleImg.width);
-    let floatY = sin(frameCount * 0.038) * sz * 0.013;
-    image(titleImg, width * 0.5 - tw * 0.5, height * 0.10 + floatY, tw, th);
+    if (th > height * 0.38) { th = height * 0.38; tw = th * (titleImg.width / titleImg.height); }
+    let floatY = sin(frameCount * 0.038) * sz * 0.012;
+    image(titleImg, width * 0.5 - tw * 0.5, height * 0.09 + floatY, tw, th);
   }
 
-  // ── Typewriter tagline (starts after 55 frames) ───────────────────
+  // Typewriter tagline
   if (frameCount > 55 && introTagIdx < INTRO_TAG.length) {
     if (frameCount % 3 === 0) introTagIdx++;
   }
   if (introTagIdx > 0) {
-    let visTxt = INTRO_TAG.slice(0, introTagIdx);
-    let blink  = (introTagIdx < INTRO_TAG.length || floor(frameCount / 18) % 2 === 0);
+    let blink = (introTagIdx < INTRO_TAG.length || floor(frameCount / 18) % 2 === 0);
     fill(255, 240, 205);
     textAlign(CENTER, CENTER);
-    textSize(sz * 0.042);
+    textSize(sz * 0.044);
     noStroke();
-    text(visTxt + (blink ? '_' : ''), width * 0.5, height * 0.76);
+    text(INTRO_TAG.slice(0, introTagIdx) + (blink ? '_' : ''), width * 0.5, height * 0.76);
   }
 
-  // ── Blinking "TAP TO BEGIN" once tagline completes ────────────────
+  // "TAP TO BEGIN" blinks once tagline done
   if (introTagIdx >= INTRO_TAG.length && floor(frameCount / 34) % 2 === 0) {
     fill(255, 220, 48);
     textAlign(CENTER, CENTER);
-    textSize(sz * 0.048);
+    textSize(sz * 0.050);
     noStroke();
     text('TAP TO BEGIN', width * 0.5, height * 0.89);
   }
 }
 
 function drawRules() {
+  // Continue the live scrolling scene as background
+  introOffset += 2.5;
+  for (let t of introTrees) {
+    t.x -= 2.5 * 0.22;
+    if (t.x + t.h * 0.55 < 0) {
+      t.x = width + random(40, 160);
+      t.h = random(getUnit() * 0.38, getUnit() * 0.72);
+    }
+  }
+  drawSceneBg(introOffset, introTrees);
+
+  // Character walking across behind the overlay
+  let unit = getUnit();
+  let chX  = ((introOffset * 1.0) % (width * 1.6)) - unit;
+  let bob  = (floor(introOffset / 10) % 2 === 0) ? 0 : -unit * 0.05;
+  if (chX > -unit && chX < width + unit) {
+    image(charImg, chX, groundY - unit + bob, unit, unit);
+  }
+
+  // Translucent dark overlay — scene visible through it
   noStroke();
-  fill(12, 12, 20);
+  fill(8, 6, 22, 182);
   rect(0, 0, width, height);
 
   let sz = min(width, height);
@@ -837,82 +866,114 @@ function drawRules() {
 }
 
 function drawGameOver() {
-  let sz   = min(width, height);
-  let gndY = height * 0.70;
+  let sz = min(width, height);
 
-  // ── Pixelated sunny-field background ───────────────────────────────
-  noStroke();
-  // Bright sky bands
-  let bands  = SKY_BANDS.length;
-  let bandPx = max(1, floor(gndY / bands));
-  for (let b = 0; b < bands; b++) {
-    let sc = SKY_BANDS[b];
-    fill(min(255, sc[0] + 28), min(255, sc[1] + 18), min(255, sc[2] + 6));
-    rect(0, b * bandPx, width, bandPx + 1);
-  }
+  // ── Animated scrolling background ────────────────────────────────
+  drawSceneBg(frameCount * 3.8, null);
 
-  // Animated clouds
-  let co = frameCount * 0.45;
-  let cPositions = [0.08, 0.32, 0.58, 0.82];
-  for (let i = 0; i < cPositions.length; i++) {
-    let cx  = ((cPositions[i] * width * 1.4 + co) % (width * 1.4)) - sz * 0.08;
-    let cy  = gndY * (0.12 + i * 0.1);
-    let cw  = sz * (0.10 + i * 0.018);
-    let ch2 = cw * (CS.length / CS[0].length);
-    drawSprite(CS, CC, cx, cy, cw, ch2);
-  }
+  // ── Card panel ───────────────────────────────────────────────────
+  let cardW  = min(width * 0.90, sz * 0.94);
+  let cardX  = width * 0.5 - cardW * 0.5;
+  let cardPad = cardW * 0.06;
 
-  // Sunny green field
-  fill(88, 172, 72);
-  rect(0, gndY, width, height - gndY);
-  // Lighter band at horizon
-  fill(112, 195, 88);
-  rect(0, gndY, width, max(4, floor(height * 0.018)));
-
-  // Pixel flowers scattered across field
-  let flowerColors = [[255,210,60],[255,120,160],[255,255,255],[180,255,120]];
-  for (let f = 0; f < 14; f++) {
-    let fx = (f * 137 + 42) % width;
-    let fy = gndY + max(6, floor((height - gndY) * 0.25)) + (f * 53) % floor((height - gndY) * 0.5);
-    let fc = flowerColors[f % flowerColors.length];
-    fill(fc[0], fc[1], fc[2]);
-    let ps = max(3, floor(sz * 0.006));
-    rect(fx, fy, ps, ps);
-    rect(fx - ps, fy - ps, ps, ps);
-    rect(fx + ps, fy - ps, ps, ps);
-    rect(fx, fy - ps * 2, ps, ps);
-    fill(255, 220, 80);
-    rect(fx, fy - ps, ps, ps); // centre
-  }
-
-  // ── title.png ─────────────────────────────────────────────────────
+  // Title image — sits above the card, large and floating
+  let titleW = 0, titleH = 0, titleY = height * 0.025;
   if (titleImg && titleImg.width > 0) {
-    let tw = sz * 0.40;
-    let th = tw * (titleImg.height / titleImg.width);
-    let ty = gndY * 0.04 + sin(frameCount * 0.04) * sz * 0.012;
-    image(titleImg, width * 0.5 - tw * 0.5, ty, tw, th);
+    titleW = min(width * 0.88, sz * 0.82);
+    titleH = titleW * (titleImg.height / titleImg.width);
+    if (titleH > height * 0.30) { titleH = height * 0.30; titleW = titleH * (titleImg.width / titleImg.height); }
+    let floatY = sin(frameCount * 0.042) * sz * 0.010;
+    image(titleImg, width * 0.5 - titleW * 0.5, titleY + floatY, titleW, titleH);
   }
 
-  // ── Text content ──────────────────────────────────────────────────
-  textAlign(CENTER, CENTER);
+  let cardTop = titleY + titleH + sz * 0.022;
+  let cardBot = height * 0.958;
+  let cardH   = cardBot - cardTop;
+
+  // Card background
+  noStroke();
+  fill(10, 14, 30, 224);
+  rect(cardX, cardTop, cardW, cardH, 6);
+
+  // Gold border
+  stroke(195, 158, 38);
+  strokeWeight(2);
+  noFill();
+  rect(cardX + 1, cardTop + 1, cardW - 2, cardH - 2, 5);
   noStroke();
 
-  fill(255, 242, 80);
-  textSize(sz * 0.068);
-  text('Great Run!', width * 0.5, gndY * 0.60);
+  // Thin accent line across top of card
+  fill(195, 158, 38);
+  rect(cardX + cardPad, cardTop + cardH * 0.085, cardW - cardPad * 2, 1);
 
+  // ── "GREAT RUN!" heading ──────────────────────────────────────────
+  fill(255, 218, 48);
+  textAlign(CENTER, CENTER);
+  textSize(max(18, sz * 0.072));
+  noStroke();
+  text('GREAT RUN!', width * 0.5, cardTop + cardH * 0.135);
+
+  // ── Distance badge ────────────────────────────────────────────────
+  let dStr = finalDist >= 1000
+    ? floor(finalDist / 1000) + ',' + String(finalDist % 1000).padStart(3, '0') + ' m'
+    : finalDist + ' m';
   fill(255, 255, 255);
-  textSize(sz * 0.050);
-  text(finalDist + 'm', width * 0.5, gndY * 0.73);
+  textSize(max(22, sz * 0.092));
+  text(dStr, width * 0.5, cardTop + cardH * 0.295);
+  fill(165, 195, 255);
+  textSize(max(10, sz * 0.028));
+  text('distance explored', width * 0.5, cardTop + cardH * 0.385);
 
-  fill(220, 255, 200);
-  textSize(sz * 0.024);
-  text('distance explored', width * 0.5, gndY * 0.81);
+  // Thin divider
+  fill(50, 48, 78);
+  noStroke();
+  rect(cardX + cardPad, cardTop + cardH * 0.44, cardW - cardPad * 2, 1);
 
+  // ── Item stats row ────────────────────────────────────────────────
+  let iItems = [
+    { key: 'burger', sp: BURGERS, sc: BC,   bad: true  },
+    { key: 'shake',  sp: SHAKES,  sc: SHKC, bad: true  },
+    { key: 'boba',   sp: BOBAS,   sc: BOBC, bad: false },
+    { key: 'coffee', sp: COFFEES, sc: COFC, bad: false },
+  ];
+  let iRowMid = cardTop + cardH * 0.565;
+  let iSlot   = (cardW - cardPad * 2) / iItems.length;
+  let iSz     = min(sz * 0.068, iSlot * 0.52);
+
+  for (let i = 0; i < iItems.length; i++) {
+    let it  = iItems[i];
+    let cx  = cardX + cardPad + iSlot * i + iSlot * 0.5;
+    let iw  = iSz * (it.sp[0].length / it.sp.length);
+    drawSprite(it.sp, it.sc, cx - iw * 0.5, iRowMid - iSz * 0.55, iw, iSz);
+    fill(it.bad ? color(255, 138, 118) : color(118, 255, 160));
+    textAlign(CENTER, CENTER);
+    textSize(max(10, sz * 0.030));
+    noStroke();
+    text('\xd7' + (itemCounts ? (itemCounts[it.key] || 0) : 0), cx, iRowMid + iSz * 0.62);
+  }
+
+  // Thin divider
+  fill(50, 48, 78);
+  noStroke();
+  rect(cardX + cardPad, cardTop + cardH * 0.72, cardW - cardPad * 2, 1);
+
+  // ── Instagram CTA ─────────────────────────────────────────────────
+  fill(255, 255, 255);
+  textAlign(CENTER, CENTER);
+  textSize(max(13, sz * 0.038));
+  noStroke();
+  text('@searchcentralfl', width * 0.5, cardTop + cardH * 0.808);
+  fill(185, 180, 218);
+  textSize(max(9, sz * 0.024));
+  text('follow us on instagram', width * 0.5, cardTop + cardH * 0.878);
+
+  // ── Tap to play again ─────────────────────────────────────────────
   if (floor(frameCount / 36) % 2 === 0) {
-    fill(255, 242, 80);
-    textSize(sz * 0.034);
-    text('Tap to explore again!', width * 0.5, height * 0.91);
+    fill(255, 218, 48);
+    textAlign(CENTER, CENTER);
+    textSize(max(11, sz * 0.032));
+    noStroke();
+    text('TAP TO PLAY AGAIN', width * 0.5, cardTop + cardH * 0.955);
   }
 }
 
