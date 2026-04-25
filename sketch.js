@@ -189,11 +189,12 @@ let rwPhase     = 0;  // which row is currently being typed (0-3); 4 = all done
 let rwLineChars = 0;  // chars of current row revealed
 let rwTimer     = 0;
 
-let IS_MOBILE   = false;
-let shakeTimer  = 0;
-let particles   = [];
-let bestDist    = 0;
-let linkButtons = [];
+let IS_MOBILE    = false;
+let shakeTimer   = 0;
+let particles    = [];
+let bestDist     = 0;
+let linkButtons  = [];
+let playAgainBtn = null;
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJumps, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -241,6 +242,7 @@ function setup() {
   textFont('monospace');
   bestDist = parseInt(localStorage.getItem('searchBestDist') || '0', 10);
   initGame();
+  startMusic(); // attempt autoplay (works on desktop; mobile requires a user gesture)
   introTrees = [];
   let treeCount = IS_MOBILE ? 4 : 8;
   for (let i = 0; i < treeCount; i++) {
@@ -980,15 +982,15 @@ function drawGameOver() {
   noStroke();
 
   // ── Header: title PNG inside card ────────────────────────────────
-  let hdrPad  = cardW * 0.05;
+  let hdrPad  = cardW * 0.04;
   let maxTW   = cardW - hdrPad * 2;
-  let maxTH   = cardH * 0.175;
+  let maxTH   = cardH * 0.230;
   let tw = maxTW, th = 0;
   if (titleImg && titleImg.width > 0) {
     th = tw * (titleImg.height / titleImg.width);
     if (th > maxTH) { th = maxTH; tw = th * (titleImg.width / titleImg.height); }
     let floatY = sin(frameCount * 0.042) * sz * 0.007;
-    image(titleImg, width * 0.5 - tw * 0.5, cardTop + cardH * 0.022 + floatY, tw, th);
+    image(titleImg, width * 0.5 - tw * 0.5, cardTop + cardH * 0.018 + floatY, tw, th);
   }
 
   // Gold accent rule below header
@@ -1049,29 +1051,32 @@ function drawGameOver() {
   }
 
   // ── Partner link buttons ──────────────────────────────────────────
-  linkButtons = [];
+  linkButtons  = [];
+  playAgainBtn = null;
 
-  let linksTop = iRowMid + iSz * 0.72 + sz * 0.018;
+  let linksTop = iRowMid + iSz * 0.72 + sz * 0.016;
   fill(50, 48, 78);
   noStroke();
   rect(cardX + cardPad, linksTop, cardW - cardPad * 2, 1);
 
   fill(120, 255, 155);
   textAlign(CENTER, CENTER);
-  textSize(max(9, sz * 0.024));
+  textSize(max(9, sz * 0.022));
   noStroke();
-  let labelY = linksTop + sz * 0.024;
+  let labelY    = linksTop + sz * 0.022;
   text('★  SUPPORT LOCAL  ★', width * 0.5, labelY);
 
-  // Remaining space below label split between 3 buttons + replay text
-  let afterLabel = labelY + sz * 0.014;
-  let remaining  = cardBot - afterLabel - sz * 0.050; // reserve ~50px for replay
-  let btnH       = max(44, remaining * 0.37);
-  let btnGap     = cardW * 0.025;
-  let btnW       = (cardW - cardPad * 2 - btnGap) * 0.5;
+  // Divide remaining card space evenly across 3 link buttons + 1 play-again button
+  let btnGap    = max(4, sz * 0.010);
+  let afterLbl  = labelY + sz * 0.013;
+  let totalH    = cardBot - afterLbl - btnGap; // all space to card bottom
+  let btnH      = max(38, (totalH - btnGap * 3) * 0.32);  // biz buttons
+  let sfBtnH    = max(34, (totalH - btnGap * 3) * 0.28);  // searchcentralfl
+  let playBtnH  = max(34, (totalH - btnGap * 3) * 0.25);  // play again
+  let btnW      = (cardW - cardPad * 2 - btnGap) * 0.5;
 
-  // Two local business buttons side by side
-  let bizY = afterLabel;
+  // Two local business buttons
+  let bizY = afterLbl;
   for (let i = 0; i < 2; i++) {
     let p  = PARTNERS[i];
     let bx = cardX + cardPad + i * (btnW + btnGap);
@@ -1087,24 +1092,23 @@ function drawGameOver() {
 
     fill(p.col[0], p.col[1], p.col[2]);
     textAlign(CENTER, CENTER);
-    textSize(max(10, sz * 0.032));
-    text(p.name, bx + btnW * 0.5, bizY + btnH * 0.36);
+    textSize(max(9, sz * 0.030));
+    text(p.name, bx + btnW * 0.5, bizY + btnH * 0.34);
 
     fill(210, 205, 235);
-    textSize(max(8, sz * 0.024));
-    text(p.handle, bx + btnW * 0.5, bizY + btnH * 0.67);
+    textSize(max(7, sz * 0.022));
+    text(p.handle, bx + btnW * 0.5, bizY + btnH * 0.64);
 
-    fill(p.col[0], p.col[1], p.col[2], 140);
-    textSize(max(7, sz * 0.018));
-    text('tap to visit ↗', bx + btnW * 0.5, bizY + btnH * 0.90);
+    fill(p.col[0], p.col[1], p.col[2], 130);
+    textSize(max(6, sz * 0.016));
+    text('tap to visit ↗', bx + btnW * 0.5, bizY + btnH * 0.89);
 
     linkButtons.push({ x: bx, y: bizY, w: btnW, h: btnH, url: p.url });
   }
 
   // SearchCentralFL — full-width button
-  let sfBtnH = max(44, remaining * 0.30);
-  let sfY    = bizY + btnH + btnGap;
-  let p2     = PARTNERS[2];
+  let sfY = bizY + btnH + btnGap;
+  let p2  = PARTNERS[2];
 
   noStroke();
   fill(22, 20, 42);
@@ -1117,27 +1121,30 @@ function drawGameOver() {
 
   fill(p2.col[0], p2.col[1], p2.col[2]);
   textAlign(CENTER, CENTER);
-  textSize(max(10, sz * 0.032));
-  text(p2.name, width * 0.5, sfY + sfBtnH * 0.32);
+  textSize(max(9, sz * 0.030));
+  text(p2.name + '  ' + p2.handle, width * 0.5, sfY + sfBtnH * 0.36);
 
-  fill(210, 205, 235);
-  textSize(max(8, sz * 0.024));
-  text(p2.handle, width * 0.5, sfY + sfBtnH * 0.60);
-
-  fill(p2.col[0], p2.col[1], p2.col[2], 140);
-  textSize(max(7, sz * 0.018));
-  text('follow us on instagram  ↗', width * 0.5, sfY + sfBtnH * 0.85);
+  fill(p2.col[0], p2.col[1], p2.col[2], 130);
+  textSize(max(6, sz * 0.016));
+  text('follow us on instagram  ↗', width * 0.5, sfY + sfBtnH * 0.75);
 
   linkButtons.push({ x: cardX + cardPad, y: sfY, w: cardW - cardPad * 2, h: sfBtnH, url: p2.url });
 
-  // ── Tap to play again ─────────────────────────────────────────────
-  if (floor(frameCount / 36) % 2 === 0) {
-    fill(255, 218, 48);
-    textAlign(CENTER, CENTER);
-    textSize(max(10, sz * 0.030));
-    noStroke();
-    text('TAP ANYWHERE TO PLAY AGAIN', width * 0.5, sfY + sfBtnH + sz * 0.030);
-  }
+  // ── Play Again button ─────────────────────────────────────────────
+  let playY = sfY + sfBtnH + btnGap;
+  noStroke();
+  fill(180, 138, 22);
+  rect(cardX + cardPad, playY, cardW - cardPad * 2, playBtnH, 5);
+  fill(255, 218, 48);
+  rect(cardX + cardPad, playY, cardW - cardPad * 2, playBtnH - 3, 5);
+
+  fill(18, 14, 32);
+  textAlign(CENTER, CENTER);
+  textSize(max(10, sz * 0.034));
+  noStroke();
+  text('▶  PLAY AGAIN', width * 0.5, playY + playBtnH * 0.50);
+
+  playAgainBtn = { x: cardX + cardPad, y: playY, w: cardW - cardPad * 2, h: playBtnH };
 }
 
 function drawWin() {
@@ -1163,6 +1170,7 @@ function touchStarted()  { handleInput(); return false; }
 
 function handleInput() {
   if (gameState === 'INTRO') {
+    startMusic(); // unlock audio context on first gesture (required on iOS/Chrome)
     gameState   = 'RULES';
     rwCharIdx   = 0; rwPhase = 0; rwLineChars = 0; rwTimer = 0;
   } else if (gameState === 'RULES') {
@@ -1189,17 +1197,20 @@ function handleInput() {
       ch.jumpsLeft--;
     }
   } else if (gameState === 'GAMEOVER') {
-    // Link buttons take priority — don't restart if player tapped one
+    let tx = mouseX, ty = mouseY;
     for (let btn of linkButtons) {
-      if (mouseX >= btn.x && mouseX <= btn.x + btn.w &&
-          mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+      if (tx >= btn.x && tx <= btn.x + btn.w && ty >= btn.y && ty <= btn.y + btn.h) {
         window.open(btn.url, '_blank');
         return;
       }
     }
-    stopMusic();
-    initGame();
-    gameState = 'PLAYING';
-    startMusic();
+    if (playAgainBtn &&
+        tx >= playAgainBtn.x && tx <= playAgainBtn.x + playAgainBtn.w &&
+        ty >= playAgainBtn.y && ty <= playAgainBtn.y + playAgainBtn.h) {
+      stopMusic();
+      initGame();
+      gameState = 'PLAYING';
+      startMusic();
+    }
   }
 }
