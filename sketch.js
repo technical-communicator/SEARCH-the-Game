@@ -206,6 +206,10 @@ function playSound(snd) {
   snd.play();
 }
 
+function rumble(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
 function startMusic() {
   if (!sndMusic || !sndMusic.isLoaded() || sndMusic.isPlaying()) return;
   sndMusic.setLoop(true);
@@ -425,6 +429,7 @@ function updateGame() {
         hearts--;
         invulnTimer = INVULN_FRAMES;
         shakeTimer  = 12;
+        rumble(80);
         if (hearts <= 0) {
           hearts    = 0;
           finalDist = floor(scrollDist / 4);
@@ -435,6 +440,7 @@ function updateGame() {
           gameState = 'GAMEOVER';
           stopMusic();
           playSound(sndGameOver);
+          rumble([60, 40, 120]);
           return;
         }
         playSound(sndHurt);
