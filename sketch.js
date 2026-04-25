@@ -154,6 +154,8 @@ const CLOUD_DEFS = [
   { f: 0.66, y: 0.11, sc: 1.1 },
 ];
 
+const CHAR_SCALE = 1.15;
+
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let charImg;
@@ -180,6 +182,11 @@ let rwCharIdx   = 0;  // chars of title revealed
 let rwPhase     = 0;  // which row is currently being typed (0-3); 4 = all done
 let rwLineChars = 0;  // chars of current row revealed
 let rwTimer     = 0;
+
+let IS_MOBILE  = false;
+let shakeTimer = 0;
+let particles  = [];
+let bestDist   = 0;
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let sndMusic, sndJumps, sndHurt, sndCollect, sndWin, sndGameOver;
@@ -220,12 +227,16 @@ function preload() {
 }
 
 function setup() {
+  pixelDensity(1);
+  IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || (windowWidth < 600);
   createCanvas(windowWidth, windowHeight);
   noSmooth();
   textFont('monospace');
+  bestDist = parseInt(localStorage.getItem('searchBestDist') || '0', 10);
   initGame();
   introTrees = [];
-  for (let i = 0; i < 8; i++) {
+  let treeCount = IS_MOBILE ? 4 : 8;
+  for (let i = 0; i < treeCount; i++) {
     introTrees.push(randomTree(random(0, width * 1.4)));
   }
 }
@@ -281,10 +292,11 @@ function initGame() {
   groundY    = height * GROUND_RATIO;
   let unit   = getUnit();
 
+  let chSize = floor(unit * CHAR_SCALE);
   ch = {
-    w: unit, h: unit,
+    w: chSize, h: chSize,
     x: width * 0.18,
-    y: groundY - unit,
+    y: groundY - chSize,
     vy: 0, onGround: true,
     jumpsLeft: 2,
   };
@@ -299,6 +311,8 @@ function initGame() {
   nextSpawnIn = 80;
   itemCounts  = { burger: 0, shake: 0, boba: 0, coffee: 0 };
   jumpSndIdx  = 0;
+  particles   = [];
+  shakeTimer  = 0;
 
   clouds = [];
   for (let i = 0; i < 3; i++) {
@@ -311,7 +325,7 @@ function initGame() {
   }
 
   bgTrees = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < (IS_MOBILE ? 3 : 7); i++) {
     bgTrees.push(randomTree(random(0, width * 1.4)));
   }
 }
@@ -331,12 +345,13 @@ function randomTree(x) {
 function recalcLayout() {
   groundY = height * GROUND_RATIO;
   if (!ch) return;
-  let unit = getUnit();
-  ch.w = unit;
-  ch.h = unit;
+  let unit   = getUnit();
+  let chSize = floor(unit * CHAR_SCALE);
+  ch.w = chSize;
+  ch.h = chSize;
   ch.x = width * 0.18;
   if (ch.onGround || gameState === 'START') {
-    ch.y = groundY - unit;
+    ch.y = groundY - chSize;
   }
   ({ gravity: chGravity, jumpForce: chJumpForce } = calcPhysics(unit));
 }
@@ -400,9 +415,14 @@ function updateGame() {
         itemCounts[o.variant]++;
         hearts--;
         invulnTimer = INVULN_FRAMES;
+        shakeTimer  = 12;
         if (hearts <= 0) {
           hearts    = 0;
           finalDist = floor(scrollDist / 4);
+          if (finalDist > bestDist) {
+            bestDist = finalDist;
+            localStorage.setItem('searchBestDist', bestDist);
+          }
           gameState = 'GAMEOVER';
           stopMusic();
           playSound(sndGameOver);
@@ -412,6 +432,7 @@ function updateGame() {
       } else {
         itemCounts[o.variant]++;
         hearts = min(hearts + 1, 3);
+        spawnCollectParticles(o.x + o.w * 0.5, o.y + o.h * 0.5);
         playSound(sndCollect);
         obstacles.splice(i, 1);
         continue;
@@ -423,7 +444,7 @@ function updateGame() {
 }
 
 function spawnObstacle() {
-  let unit = ch.w;
+  let unit = getUnit();
   let isBad = random() < 0.6;
 
   if (isBad) {
@@ -493,7 +514,11 @@ function drawSkyAndGround() {
   for (let c of clouds) {
     let cw  = getUnit() * 0.85 * c.sc;
     let ch2 = cw * (CS.length / CS[0].length);
-    drawSprite(CS, CC, c.x, c.y, cw, ch2);
+    if (IS_MOBILE) {
+      drawSimpleCloud(c.x, c.y, cw, ch2);
+    } else {
+      drawSprite(CS, CC, c.x, c.y, cw, ch2);
+    }
   }
 
   // Ground with scrolling brick road
@@ -540,16 +565,17 @@ function drawPixelTree(tx, ty, tw, th, shade) {
 }
 
 function drawBrickRoad(offset) {
-  let groundH = height - groundY;
-  let brickH  = max(4, floor(groundH / 6));
-  let brickW  = brickH * 3.2;
-  let mortar  = 1;
+  let groundH  = height - groundY;
+  let brickRows = IS_MOBILE ? 3 : 6;
+  let brickH   = max(4, floor(groundH / brickRows));
+  let brickW   = brickH * 3.2;
+  let mortar   = 1;
 
   noStroke();
   fill(72, 54, 40);
   rect(0, groundY, width, groundH);
 
-  for (let row = 0; row < 6; row++) {
+  for (let row = 0; row < brickRows; row++) {
     let by        = groundY + row * brickH;
     let rowOff    = (row % 2 === 0) ? 0 : brickW * 0.5;
     let scrollOff = offset % brickW;
@@ -569,6 +595,13 @@ function drawWalkingChar(offset) {
   if (chX > -unit && chX < width + unit) {
     image(charImg, chX, groundY - unit + bob, unit, unit);
   }
+}
+
+function drawSimpleCloud(x, y, w, h) {
+  noStroke();
+  fill(255, 255, 255);
+  rect(floor(x + w * 0.15), floor(y + h * 0.4), ceil(w * 0.7), ceil(h * 0.6));
+  rect(floor(x + w * 0.3),  floor(y),            ceil(w * 0.4), ceil(h * 0.55));
 }
 
 function drawSceneBg(offset, trees) {
@@ -597,7 +630,11 @@ function drawSceneBg(offset, trees) {
     let cx  = ((cd.f * width + offset * 0.55) % (width * 1.4 + sz * 0.2)) - sz * 0.12;
     let cw  = unit * 0.85 * cd.sc;
     let ch2 = cw * (CS.length / CS[0].length);
-    drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
+    if (IS_MOBILE) {
+      drawSimpleCloud(cx, groundY * cd.y, cw, ch2);
+    } else {
+      drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
+    }
   }
 
   fill(88, 172, 72);
@@ -686,8 +723,49 @@ function drawGuiFrame() {
   }
 }
 
+// ─── Particles ────────────────────────────────────────────────────────────────
+function spawnCollectParticles(x, y) {
+  let count = IS_MOBILE ? 6 : 14;
+  for (let i = 0; i < count; i++) {
+    let angle = random(TWO_PI);
+    let speed = random(1.5, 4.5);
+    particles.push({
+      x, y,
+      vx:    cos(angle) * speed,
+      vy:    sin(angle) * speed - 2,
+      life:  1.0,
+      decay: random(0.04, 0.08),
+      size:  random(4, 9),
+      col:   random() < 0.5 ? [255, 220, 48] : [100, 255, 140],
+    });
+  }
+}
+
+function updateAndDrawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.vy += 0.18;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    noStroke();
+    fill(p.col[0], p.col[1], p.col[2], p.life * 255);
+    let s = max(1, floor(p.size * p.life));
+    rect(floor(p.x - s * 0.5), floor(p.y - s * 0.5), s, s);
+  }
+}
+
 // ─── Game screen ──────────────────────────────────────────────────────────────
 function drawGame() {
+  let shaking = shakeTimer > 0;
+  if (shaking) {
+    push();
+    let mag = shakeTimer * 0.75;
+    translate(random(-mag, mag), random(-mag, mag));
+    shakeTimer--;
+  }
+
   drawSkyAndGround();
 
   // Obstacles
@@ -712,6 +790,9 @@ function drawGame() {
     image(charImg, ch.x, ch.y, ch.w, ch.h);
   }
 
+  updateAndDrawParticles();
+
+  if (shaking) pop();
   drawGuiFrame();
 }
 
@@ -738,13 +819,13 @@ function drawIntro() {
   fill(0, 0, 0, 72);
   rect(0, 0, width, height);
 
-  // ── Title image — larger on all screens, especially mobile ────────
+  // ── Title image ───────────────────────────────────────────────────
   if (titleImg && titleImg.width > 0) {
-    let tw     = min(width * 0.88, sz * 0.80);
+    let tw     = min(width * 0.94, sz * 0.90);
     let th     = tw * (titleImg.height / titleImg.width);
-    if (th > height * 0.38) { th = height * 0.38; tw = th * (titleImg.width / titleImg.height); }
+    if (th > height * 0.46) { th = height * 0.46; tw = th * (titleImg.width / titleImg.height); }
     let floatY = sin(frameCount * 0.038) * sz * 0.012;
-    image(titleImg, width * 0.5 - tw * 0.5, height * 0.09 + floatY, tw, th);
+    image(titleImg, width * 0.5 - tw * 0.5, height * 0.07 + floatY, tw, th);
   }
 
   // Typewriter tagline
@@ -871,11 +952,11 @@ function drawGameOver() {
   let cardPad = cardW * 0.06;
 
   // Title image — sits above the card, large and floating
-  let titleW = 0, titleH = 0, titleY = height * 0.025;
+  let titleW = 0, titleH = 0, titleY = height * 0.018;
   if (titleImg && titleImg.width > 0) {
-    titleW = min(width * 0.88, sz * 0.82);
+    titleW = min(width * 0.94, sz * 0.90);
     titleH = titleW * (titleImg.height / titleImg.width);
-    if (titleH > height * 0.30) { titleH = height * 0.30; titleW = titleH * (titleImg.width / titleImg.height); }
+    if (titleH > height * 0.36) { titleH = height * 0.36; titleW = titleH * (titleImg.width / titleImg.height); }
     let floatY = sin(frameCount * 0.042) * sz * 0.010;
     image(titleImg, width * 0.5 - titleW * 0.5, titleY + floatY, titleW, titleH);
   }
@@ -918,13 +999,19 @@ function drawGameOver() {
   textSize(max(10, sz * 0.028));
   text('distance explored', width * 0.5, cardTop + cardH * 0.385);
 
+  if (bestDist > 0) {
+    fill(255, 195, 60);
+    textSize(max(9, sz * 0.026));
+    text('BEST  ' + bestDist + ' m', width * 0.5, cardTop + cardH * 0.435);
+  }
+
   // Thin divider
   fill(50, 48, 78);
   noStroke();
-  rect(cardX + cardPad, cardTop + cardH * 0.44, cardW - cardPad * 2, 1);
+  rect(cardX + cardPad, cardTop + cardH * 0.47, cardW - cardPad * 2, 1);
 
   // ── Item stats row ────────────────────────────────────────────────
-  let iRowMid = cardTop + cardH * 0.565;
+  let iRowMid = cardTop + cardH * 0.590;
   let iSlot   = (cardW - cardPad * 2) / LEGEND_ROWS.length;
   let iSz     = min(sz * 0.068, iSlot * 0.52);
 
@@ -943,17 +1030,17 @@ function drawGameOver() {
   // Thin divider
   fill(50, 48, 78);
   noStroke();
-  rect(cardX + cardPad, cardTop + cardH * 0.72, cardW - cardPad * 2, 1);
+  rect(cardX + cardPad, cardTop + cardH * 0.748, cardW - cardPad * 2, 1);
 
   // ── Instagram CTA ─────────────────────────────────────────────────
   fill(255, 255, 255);
   textAlign(CENTER, CENTER);
   textSize(max(13, sz * 0.038));
   noStroke();
-  text('@searchcentralfl', width * 0.5, cardTop + cardH * 0.808);
+  text('@searchcentralfl', width * 0.5, cardTop + cardH * 0.830);
   fill(185, 180, 218);
   textSize(max(9, sz * 0.024));
-  text('follow us on instagram', width * 0.5, cardTop + cardH * 0.878);
+  text('follow us on instagram', width * 0.5, cardTop + cardH * 0.898);
 
   // ── Tap to play again ─────────────────────────────────────────────
   if (floor(frameCount / 36) % 2 === 0) {
