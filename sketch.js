@@ -166,7 +166,8 @@ let rwPhase   = 0;   // how many instruction rows are visible (0-5)
 let rwTimer   = 0;   // frame counter used for pacing
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
-let sndMusic, sndJump, sndHurt, sndCollect, sndWin, sndGameOver;
+let sndMusic, sndJumps, sndHurt, sndCollect, sndWin, sndGameOver;
+let jumpSndIdx = 0;
 
 function playSound(snd) {
   if (!snd || !snd.isLoaded()) return;
@@ -190,7 +191,12 @@ function preload() {
   charImg    = loadImage('search.png');
   titleImg   = loadImage('title.png');
   sndMusic    = loadSound('music.mp3');
-  sndJump     = loadSound('jump.mp3');
+  sndJumps    = [
+    loadSound('jump1.mp3'),
+    loadSound('jump2.mp3'),
+    loadSound('jump3.mp3'),
+    loadSound('jump4.mp3'),
+  ];
   sndHurt     = loadSound('hurt.mp3');
   sndCollect  = loadSound('collect.mp3');
   sndWin      = loadSound('win.mp3');
@@ -272,6 +278,7 @@ function initGame() {
   spawnTimer  = 0;
   nextSpawnIn = 80;
   itemCounts  = { burger: 0, shake: 0, boba: 0, coffee: 0 };
+  jumpSndIdx  = 0;
 
   clouds = [];
   for (let i = 0; i < 3; i++) {
@@ -869,7 +876,8 @@ function handleInput() {
       ch.vy = chJumpForce;
       ch.onGround = false;
       ch.jumpsLeft--;
-      playSound(sndJump);
+      playSound(sndJumps[jumpSndIdx % sndJumps.length]);
+      jumpSndIdx++;
     }
   } else if (gameState === 'GAMEOVER') {
     stopMusic();
