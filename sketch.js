@@ -142,10 +142,16 @@ const INTRO_TAG = 'Local shops vs. franchise chains.';
 const RULES_TITLE = 'HOW TO PLAY';
 
 const LEGEND_ROWS = [
-  { yFrac: 0.30, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
-  { yFrac: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
-  { yFrac: 0.62, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
-  { yFrac: 0.78, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
+  { key: 'burger', yFrac: 0.30, sp: BURGERS, sc: BC,   bad: true,  name: "McDonald's Burger",  hint: "Jump over — lose a ♥" },
+  { key: 'shake',  yFrac: 0.46, sp: SHAKES,  sc: SHKC, bad: true,  name: "Chick-fil-A Shake",  hint: "Jump over — lose a ♥" },
+  { key: 'boba',   yFrac: 0.62, sp: BOBAS,   sc: BOBC, bad: false, name: "Boba",               hint: "Collect — gain a ♥"  },
+  { key: 'coffee', yFrac: 0.78, sp: COFFEES, sc: COFC, bad: false, name: "Coffee",             hint: "Collect — gain a ♥"  },
+];
+
+const CLOUD_DEFS = [
+  { f: 0,    y: 0.14, sc: 1.4 },
+  { f: 0.38, y: 0.27, sc: 1.9 },
+  { f: 0.66, y: 0.11, sc: 1.1 },
 ];
 
 
@@ -556,7 +562,15 @@ function drawBrickRoad(offset) {
   }
 }
 
-// Shared scrolling-scene renderer used by intro, rules, and end screens
+function drawWalkingChar(offset) {
+  let unit = getUnit();
+  let chX  = (offset % (width * 1.6)) - unit;
+  let bob  = (floor(offset / 10) % 2 === 0) ? 0 : -unit * 0.05;
+  if (chX > -unit && chX < width + unit) {
+    image(charImg, chX, groundY - unit + bob, unit, unit);
+  }
+}
+
 function drawSceneBg(offset, trees) {
   let sz = min(width, height);
   noStroke();
@@ -578,10 +592,10 @@ function drawSceneBg(offset, trees) {
     }
   }
 
-  let cDefs = [{f:0,y:0.14,sc:1.4},{f:0.38,y:0.27,sc:1.9},{f:0.66,y:0.11,sc:1.1}];
-  for (let cd of cDefs) {
+  let unit = getUnit();
+  for (let cd of CLOUD_DEFS) {
     let cx  = ((cd.f * width + offset * 0.55) % (width * 1.4 + sz * 0.2)) - sz * 0.12;
-    let cw  = getUnit() * 0.85 * cd.sc;
+    let cw  = unit * 0.85 * cd.sc;
     let ch2 = cw * (CS.length / CS[0].length);
     drawSprite(CS, CC, cx, groundY * cd.y, cw, ch2);
   }
@@ -651,18 +665,11 @@ function drawGuiFrame() {
   }
 
   // ── BOTTOM PANEL: item legend with counters ───────────────────────
-  let items = [
-    { key: 'burger', sp: BURGERS, sc: BC,   bad: true  },
-    { key: 'shake',  sp: SHAKES,  sc: SHKC, bad: true  },
-    { key: 'boba',   sp: BOBAS,   sc: BOBC, bad: false },
-    { key: 'coffee', sp: COFFEES, sc: COFC, bad: false },
-  ];
-
   let iconH  = ft * 0.58;
-  let slot   = width / items.length;
+  let slot   = width / LEGEND_ROWS.length;
 
-  for (let i = 0; i < items.length; i++) {
-    let it   = items[i];
+  for (let i = 0; i < LEGEND_ROWS.length; i++) {
+    let it   = LEGEND_ROWS[i];
     let cx   = slot * i + slot * 0.5;
     let cy   = height - ft * 0.5;
     let iw   = iconH * (it.sp[0].length / it.sp.length);
@@ -724,14 +731,7 @@ function drawIntro() {
   }
 
   drawSceneBg(introOffset, introTrees);
-
-  // Character walking across
-  let unit = getUnit();
-  let chX  = ((introOffset * 1.0) % (width * 1.6)) - unit;
-  let bob  = (floor(introOffset / 10) % 2 === 0) ? 0 : -unit * 0.05;
-  if (chX > -unit && chX < width + unit) {
-    image(charImg, chX, groundY - unit + bob, unit, unit);
-  }
+  drawWalkingChar(introOffset);
 
   // Vignette
   noStroke();
@@ -781,14 +781,7 @@ function drawRules() {
     }
   }
   drawSceneBg(introOffset, introTrees);
-
-  // Character walking across behind the overlay
-  let unit = getUnit();
-  let chX  = ((introOffset * 1.0) % (width * 1.6)) - unit;
-  let bob  = (floor(introOffset / 10) % 2 === 0) ? 0 : -unit * 0.05;
-  if (chX > -unit && chX < width + unit) {
-    image(charImg, chX, groundY - unit + bob, unit, unit);
-  }
+  drawWalkingChar(introOffset);
 
   // Translucent dark overlay — scene visible through it
   noStroke();
@@ -839,8 +832,9 @@ function drawRules() {
 
     fill(r.bad ? color(218, 88, 88) : color(88, 200, 88));
     textSize(sz * 0.030);
-    let hintVis = r.hint.slice(0, hintChars);
-    text(hintVis + (hintChars < r.hint.length ? cur : (nameChars < r.name.length ? cur : '')), textX, iy + sz * 0.022);
+    let hintVis    = r.hint.slice(0, hintChars);
+    let showCursor = rowActive && (nameChars < r.name.length || hintChars < r.hint.length);
+    text(hintVis + (showCursor ? cur : ''), textX, iy + sz * 0.022);
   }
 
   // ── "Tap to play" blinks when all rows done ───────────────────────
@@ -930,18 +924,12 @@ function drawGameOver() {
   rect(cardX + cardPad, cardTop + cardH * 0.44, cardW - cardPad * 2, 1);
 
   // ── Item stats row ────────────────────────────────────────────────
-  let iItems = [
-    { key: 'burger', sp: BURGERS, sc: BC,   bad: true  },
-    { key: 'shake',  sp: SHAKES,  sc: SHKC, bad: true  },
-    { key: 'boba',   sp: BOBAS,   sc: BOBC, bad: false },
-    { key: 'coffee', sp: COFFEES, sc: COFC, bad: false },
-  ];
   let iRowMid = cardTop + cardH * 0.565;
-  let iSlot   = (cardW - cardPad * 2) / iItems.length;
+  let iSlot   = (cardW - cardPad * 2) / LEGEND_ROWS.length;
   let iSz     = min(sz * 0.068, iSlot * 0.52);
 
-  for (let i = 0; i < iItems.length; i++) {
-    let it  = iItems[i];
+  for (let i = 0; i < LEGEND_ROWS.length; i++) {
+    let it  = LEGEND_ROWS[i];
     let cx  = cardX + cardPad + iSlot * i + iSlot * 0.5;
     let iw  = iSz * (it.sp[0].length / it.sp.length);
     drawSprite(it.sp, it.sc, cx - iw * 0.5, iRowMid - iSz * 0.55, iw, iSz);
