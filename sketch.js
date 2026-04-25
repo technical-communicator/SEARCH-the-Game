@@ -138,9 +138,7 @@ const CS = [
 // jump height = unit × 1.6 and time-to-peak = 23 frames on every screen size.
 // Formula: gravity = unit × 3.2/529,  jumpForce = -(unit × 73.6/529)
 const GROUND_RATIO  = 0.78;
-const TOTAL_DIST    = 6000;
 const BASE_SPEED    = 5;
-const MAX_SPEED     = 9;
 const INVULN_FRAMES = 90;
 
 
@@ -157,6 +155,8 @@ let hearts, invulnTimer;
 let spawnTimer, nextSpawnIn;
 let clouds;
 let chGravity, chJumpForce;
+let itemCounts;    // { burger, shake, boba, coffee }
+let finalDist = 0; // distance when player died
 
 // Typewriter / rules reveal state
 const RULES_TITLE = 'HOW TO PLAY';
@@ -269,6 +269,7 @@ function initGame() {
   invulnTimer = 0;
   spawnTimer  = 0;
   nextSpawnIn = 80;
+  itemCounts  = { burger: 0, shake: 0, boba: 0, coffee: 0 };
 
   clouds = [];
   for (let i = 0; i < 3; i++) {
@@ -316,27 +317,19 @@ function updateGame() {
     }
   }
 
-  // Scroll & speed ramp
-  scrollSpeed = lerp(
-    scrollSpeed,
-    BASE_SPEED + (scrollDist / TOTAL_DIST) * (MAX_SPEED - BASE_SPEED),
-    0.01
-  );
+  // Endless logarithmic speed ramp — fast early, keeps climbing forever
+  let targetSpeed = BASE_SPEED + log(1 + scrollDist / 600) * 3.8;
+  scrollSpeed = lerp(scrollSpeed, targetSpeed, 0.008);
   scrollDist += scrollSpeed;
 
-  if (scrollDist >= TOTAL_DIST) {
-    gameState = 'WIN';
-    stopMusic();
-    playSound(sndWin);
-    return;
-  }
-
-  // Spawn obstacles
+  // Spawn rate tightens as distance grows
   spawnTimer++;
   if (spawnTimer >= nextSpawnIn) {
     spawnObstacle();
     spawnTimer  = 0;
-    nextSpawnIn = floor(random(100, 170)); // fewer obstacles = faster mobile
+    let minGap  = max(38, 115 - floor(scrollDist / 250));
+    let maxGap  = max(60,  155 - floor(scrollDist / 250));
+    nextSpawnIn = floor(random(minGap, maxGap));
   }
 
   // Update & collide obstacles
@@ -347,10 +340,12 @@ function updateGame() {
 
     if (invulnTimer <= 0 && rectsOverlap(ch, o)) {
       if (o.type === 'franchise') {
+        itemCounts[o.variant]++;
         hearts--;
         invulnTimer = INVULN_FRAMES;
         if (hearts <= 0) {
-          hearts = 0;
+          hearts    = 0;
+          finalDist = floor(scrollDist / 4);
           gameState = 'GAMEOVER';
           stopMusic();
           playSound(sndGameOver);
@@ -358,6 +353,7 @@ function updateGame() {
         }
         playSound(sndHurt);
       } else {
+        itemCounts[o.variant]++;
         hearts = min(hearts + 1, 3);
         playSound(sndCollect);
         obstacles.splice(i, 1);
@@ -437,12 +433,8 @@ function drawSkyAndGround() {
     drawSprite(CS, CC, c.x, c.y, cw, ch2);
   }
 
-  // Ground fill
-  fill(78, 152, 72);
-  rect(0, groundY, width, height - groundY);
-
-  // Scrolling grass tufts
-  drawGrassTufts();
+  // Ground with scrolling brick road
+  drawBrickRoad();
 }
 
 // 7×6 pixel-art heart
@@ -467,51 +459,123 @@ function drawPixelHeart(x, y, pxSize, filled) {
   }
 }
 
-function drawGrassTufts() {
-  let step   = 34; // larger spacing = fewer rects, better mobile perf
-  let offset = scrollDist % step;
+function drawBrickRoad() {
+  let groundH = height - groundY;
+  let brickH  = max(6, floor(groundH / 4));
+  let brickW  = brickH * 2.8;
+  let mortar  = 2;
+
+  // Mortar base
   noStroke();
-  for (let gx = -offset; gx < width + step; gx += step) {
-    let px = floor(gx);
-    fill(50, 125, 45);
-    rect(px,      groundY - 5, 2, 5);
-    rect(px + 1,  groundY - 7, 2, 7);
-    fill(65, 150, 55);
-    rect(px + 7,  groundY - 4, 2, 4);
-    rect(px + 8,  groundY - 6, 2, 6);
-    fill(50, 125, 45);
-    rect(px + 14, groundY - 5, 2, 5);
-    rect(px + 15, groundY - 3, 2, 3);
+  fill(88, 66, 50);
+  rect(0, groundY, width, groundH);
+
+  // 4 rows of bricks scrolling with the world
+  for (let row = 0; row < 4; row++) {
+    let by      = groundY + row * brickH;
+    let rowOff  = (row % 2 === 0) ? 0 : brickW / 2;
+    let scrollOff = scrollDist % brickW;
+    for (let bx = -(scrollOff + brickW) + rowOff; bx < width + brickW; bx += brickW) {
+      let shade   = ((floor((bx + scrollOff - rowOff) / brickW) + row) % 2 === 0);
+      let br = shade ? 168 : 148;
+      let bg = shade ? 96  : 82;
+      let bb = shade ? 65  : 55;
+      // Brick fill
+      fill(br, bg, bb);
+      rect(floor(bx) + mortar, by + mortar, brickW - mortar, brickH - mortar);
+      // Top highlight
+      fill(br + 22, bg + 16, bb + 12);
+      rect(floor(bx) + mortar, by + mortar, brickW - mortar, 2);
+      // Left highlight
+      fill(br + 12, bg + 8, bb + 6);
+      rect(floor(bx) + mortar, by + mortar, 2, brickH - mortar);
+    }
   }
 }
 
-function drawHearts() {
-  let sz     = min(width, height);
-  let pxSize = max(3, floor(sz * 0.009));
-  let hW     = 7 * pxSize;
-  let gap    = floor(pxSize * 2);
+function drawGuiFrame() {
+  let sz  = min(width, height);
+  let ft  = max(42, floor(sz * 0.088)); // frame band height
+  let bw  = max(5,  floor(sz * 0.010)); // side border width
+
+  noStroke();
+
+  // ── Frame fills ──────────────────────────────────────────────────
+  fill(18, 16, 30);
+  rect(0, 0, width, ft);                     // top band
+  rect(0, height - ft, width, ft);           // bottom band
+  rect(0, ft, bw, height - ft * 2);          // left strip
+  rect(width - bw, ft, bw, height - ft * 2); // right strip
+
+  // Inner bevel line (pixel-art depth)
+  fill(52, 46, 72);
+  rect(0, ft - 2, width, 2);
+  rect(0, height - ft, width, 2);
+  rect(bw, ft, 2, height - ft * 2);
+  rect(width - bw - 2, ft, 2, height - ft * 2);
+
+  // Gold accent rule
+  fill(170, 130, 35);
+  rect(0, ft - 1, width, 1);
+  rect(0, height - ft - 1, width, 1);
+
+  // ── TOP PANEL: hearts | distance | speed ─────────────────────────
+  let pxSize  = max(3, floor(sz * 0.0088));
+  let hW      = 7 * pxSize;
+  let hGap    = floor(pxSize * 2);
+  let heartY  = floor((ft - 6 * pxSize) / 2);
   for (let i = 0; i < 3; i++) {
-    drawPixelHeart(12 + i * (hW + gap), 14, pxSize, i < hearts);
+    drawPixelHeart(bw + 10 + i * (hW + hGap), heartY, pxSize, i < hearts);
   }
-}
 
-function drawProgress() {
-  let barW = width * 0.45;
-  let barH = max(8, min(width, height) * 0.014);
-  let barX = (width - barW) / 2;
-  let barY = 12;
-  let prog = constrain(scrollDist / TOTAL_DIST, 0, 1);
-
+  // Distance
+  let distM = floor(scrollDist / 4);
+  fill(255, 220, 48);
+  textAlign(RIGHT, CENTER);
+  textSize(max(9, ft * 0.34));
   noStroke();
-  fill(45, 45, 45, 185);
-  rect(barX, barY, barW, barH, barH / 2);
-  fill(255, 200, 48);
-  rect(barX, barY, barW * prog, barH, barH / 2);
+  text(distM + 'm', width - bw - 10, ft * 0.5);
 
-  textAlign(LEFT, CENTER);
-  textSize(max(10, barH * 1.5));
-  fill(255);
-  text('🏁', barX + barW + 5, barY + barH / 2);
+  // Speed gauge — 5 pip dots
+  let speedNorm  = constrain((scrollSpeed - BASE_SPEED) / 13, 0, 1);
+  let filledPips = max(1, round(speedNorm * 5));
+  let pipR   = max(3, floor(ft * 0.10));
+  let pipGap = pipR * 2 + 3;
+  let pipsW  = 5 * pipGap - 3;
+  let pipX   = width / 2 - pipsW / 2;
+  let pipY   = floor(ft * 0.5);
+  for (let p = 0; p < 5; p++) {
+    fill(p < filledPips ? color(255, 200, 40) : color(55, 50, 70));
+    ellipse(pipX + p * pipGap + pipR, pipY, pipR * 2, pipR * 2);
+  }
+
+  // ── BOTTOM PANEL: item legend with counters ───────────────────────
+  let items = [
+    { key: 'burger', sp: BURGERS, sc: BC,   bad: true  },
+    { key: 'shake',  sp: SHAKES,  sc: SHKC, bad: true  },
+    { key: 'boba',   sp: BOBAS,   sc: BOBC, bad: false },
+    { key: 'coffee', sp: COFFEES, sc: COFC, bad: false },
+  ];
+
+  let iconH  = ft * 0.58;
+  let slot   = width / items.length;
+
+  for (let i = 0; i < items.length; i++) {
+    let it   = items[i];
+    let cx   = slot * i + slot * 0.5;
+    let cy   = height - ft * 0.5;
+    let iw   = iconH * (it.sp[0].length / it.sp.length);
+    let ix   = cx - iw * 0.5 - pxSize * 2;
+    let iy   = cy - iconH * 0.5;
+    drawSprite(it.sp, it.sc, ix, iy, iw, iconH);
+
+    let cnt  = itemCounts ? (itemCounts[it.key] || 0) : 0;
+    fill(it.bad ? color(255, 130, 120) : color(120, 255, 155));
+    textAlign(LEFT, CENTER);
+    textSize(max(9, ft * 0.33));
+    noStroke();
+    text('\xd7' + cnt, ix + iw + 3, cy);
+  }
 }
 
 // ─── Game screen ──────────────────────────────────────────────────────────────
@@ -540,8 +604,7 @@ function drawGame() {
     image(charImg, ch.x, ch.y, ch.w, ch.h);
   }
 
-  drawHearts();
-  drawProgress();
+  drawGuiFrame();
 }
 
 // ─── Intro / Rules screens ────────────────────────────────────────────────────
@@ -649,13 +712,19 @@ function drawGameOver() {
   noStroke();
   fill(218, 52, 52);
   textSize(sz * 0.08);
-  text('GAME OVER', width / 2, height * 0.38);
+  text('GAME OVER', width / 2, height * 0.34);
   fill(192, 172, 172);
   textSize(sz * 0.03);
-  text('The franchises won this round.', width / 2, height * 0.51);
+  text('The franchises won this round.', width / 2, height * 0.46);
+  fill(255, 220, 48);
+  textSize(sz * 0.042);
+  text(finalDist + 'm', width / 2, height * 0.56);
+  fill(180, 160, 160);
+  textSize(sz * 0.025);
+  text('distance travelled', width / 2, height * 0.63);
   fill(255, 220, 48);
   textSize(sz * 0.038);
-  text('Tap or click to try again', width / 2, height * 0.63);
+  text('Tap or click to try again', width / 2, height * 0.76);
 }
 
 function drawWin() {
@@ -701,8 +770,7 @@ function handleInput() {
       ch.onGround = false;
       playSound(sndJump);
     }
-  } else {
-    // WIN or GAMEOVER — restart directly into game
+  } else if (gameState === 'GAMEOVER') {
     stopMusic();
     initGame();
     gameState = 'PLAYING';
